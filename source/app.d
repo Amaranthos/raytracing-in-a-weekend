@@ -28,6 +28,79 @@ enum V3 blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
 GLuint textureId;
 uint[] texture;
 
+V3 rayColour(in Ray ray)
+{
+	V3 dir = ray.dir.normalised;
+	double t = 0.5 * (dir.y + 1.0);
+	return V3.one.lerp(V3(0.5, 0.7, 1.0), t);
+}
+
+void loadScene()
+{
+	texture = new uint[](texWidth * texHeight);
+
+	for (int j = texHeight - 1; j >= 0; --j)
+	{
+		writefln!"lines remaining: %s "(j);
+		foreach (i; 0 .. texWidth)
+		{
+			const double u = cast(double)(i) / (texWidth - 1);
+			const double v = cast(double)(j) / (texHeight - 1);
+
+			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
+			V3 c = rayColour(r);
+
+			// dfmt off
+			texture[j * texWidth + i] =
+				(cast(int)(  1 * 255)) << 24 |
+				(cast(int)(c.z * 255)) << 16 |
+				(cast(int)(c.y * 255)) <<  8 |
+				(cast(int)(c.x * 255)) <<  0;
+			// dfmt on
+		}
+	}
+
+	writeln("done...");
+
+	glGenTextures(1, &textureId);
+	glBindTexture(GL_TEXTURE_2D, textureId);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glFlush();
+}
+
+void unloadScene()
+{
+}
+
+void renderScene()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture
+			.ptr);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	GLuint fboId;
+	glGenFramebuffers(1, &fboId);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, textureId, 0);
+	glBlitFramebuffer(0, 0, texWidth, texHeight,
+		0, 0, winWidth, winHeight,
+		GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glDeleteFramebuffers(1, &fboId);
+}
+
 int main()
 {
 	SDLSupport sdlStatus = loadSDL();
@@ -102,77 +175,4 @@ int main()
 	}
 
 	return 0;
-}
-
-void loadScene()
-{
-	texture = new uint[](texWidth * texHeight);
-
-	for (int j = texHeight - 1; j >= 0; --j)
-	{
-		writefln!"lines remaining: %s "(j);
-		foreach (i; 0 .. texWidth)
-		{
-			const double u = cast(double)(i) / (texWidth - 1);
-			const double v = cast(double)(j) / (texHeight - 1);
-
-			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
-			V3 c = rayColour(r);
-
-			// dfmt off
-			texture[j * texWidth + i] =
-				(cast(int)(  1 * 255)) << 24 |
-				(cast(int)(c.z * 255)) << 16 |
-				(cast(int)(c.y * 255)) <<  8 |
-				(cast(int)(c.x * 255)) <<  0;
-			// dfmt on
-		}
-	}
-
-	writeln("done...");
-
-	glGenTextures(1, &textureId);
-	glBindTexture(GL_TEXTURE_2D, textureId);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glFlush();
-}
-
-void unloadScene()
-{
-}
-
-void renderScene()
-{
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture
-			.ptr);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	GLuint fboId;
-	glGenFramebuffers(1, &fboId);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
-	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, textureId, 0);
-	glBlitFramebuffer(0, 0, texWidth, texHeight,
-		0, 0, winWidth, winHeight,
-		GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	glDeleteFramebuffers(1, &fboId);
-}
-
-V3 rayColour(in Ray ray)
-{
-	V3 dir = ray.dir.normalised;
-	double t = 0.5 * (dir.y + 1.0);
-	return (1.0 - t) * V3.one + t * V3(0.5, 0.7, 1.0);
 }

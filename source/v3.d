@@ -31,24 +31,24 @@ union V3
 		);
 	}
 
-	float dot(in V3 rhs) const
+	double dot(in V3 rhs) const
 	{
 		return x * rhs.x + y * rhs.y + z * rhs.z;
 	}
 
-	float magnitudeSquared() const
+	double magnitudeSquared() const
 	{
 		return dot(this);
 	}
 
-	float magnitude() const
+	double magnitude() const
 	{
 		import std.math : sqrt;
 
 		return magnitudeSquared.sqrt;
 	}
 
-	void magnitude(in float v)
+	void magnitude(in double v)
 	in (v != 0f)
 	{
 		this *= v / magnitude();
@@ -63,7 +63,12 @@ union V3
 		return r;
 	}
 
-	V3 opBinary(string op)(in float rhs) const if (op == "*" || op == "/")
+	V3 lerp(V3 rhs, double t)
+	{
+		return (1.0 - t) * this + t * rhs;
+	}
+
+	V3 opBinary(string op)(in double rhs) const if (op == "*" || op == "/")
 	{
 		V3 r;
 		mixin("r.x = x " ~ op ~ "rhs;");
@@ -72,7 +77,7 @@ union V3
 		return r;
 	}
 
-	V3 opBinaryRight(string op)(in float rhs) const if (op == "*" || op == "/")
+	V3 opBinaryRight(string op)(in double rhs) const if (op == "*" || op == "/")
 	{
 		mixin("return this" ~ op ~ "rhs;");
 	}
@@ -91,7 +96,7 @@ union V3
 		return V3(-x, -y, -z);
 	}
 
-	V3 opOpAssign(string op)(in float rhs) if (op == "*" || op == "/")
+	V3 opOpAssign(string op)(in double rhs) if (op == "*" || op == "/")
 	{
 		mixin("x " ~ op ~ "= rhs;");
 		mixin("y " ~ op ~ "= rhs;");
