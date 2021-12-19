@@ -10,16 +10,16 @@ union V3
 		double z;
 	}
 
-	this(double[3] e)
-	{
-		this.e = e;
-	}
-
 	this(double x, double y, double z)
 	{
 		this.x = x;
 		this.y = y;
 		this.z = z;
+	}
+
+	this(double[3] e)
+	{
+		this.e = e;
 	}
 
 	V3 cross(in V3 rhs) const

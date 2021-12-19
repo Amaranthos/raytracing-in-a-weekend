@@ -5,6 +5,7 @@ import std.stdio;
 import std.string;
 
 import exception;
+import colour;
 import ray;
 import v3;
 
@@ -28,11 +29,24 @@ enum V3 blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
 GLuint textureId;
 uint[] texture;
 
-V3 rayColour(in Ray ray)
+Colour rayColour(in Ray ray)
 {
+	if (hitSphere(V3(0.0, 0.0, -1.0), 0.5, ray))
+		return Colour.red;
+
 	V3 dir = ray.dir.normalised;
 	double t = 0.5 * (dir.y + 1.0);
-	return V3.one.lerp(V3(0.5, 0.7, 1.0), t);
+	return cast(Colour) Colour.one.lerp(Colour(0.5, 0.7, 1.0), t);
+}
+
+bool hitSphere(in V3 center, in double radius, in Ray ray)
+{
+	V3 oc = ray.origin - center;
+	auto a = ray.dir.magnitudeSquared;
+	auto b = 2.0 * oc.dot(ray.dir);
+	auto c = oc.magnitudeSquared - radius ^^ 2;
+	auto discriminant = b * b - 4 * a * c;
+	return discriminant > 0;
 }
 
 void loadScene()
