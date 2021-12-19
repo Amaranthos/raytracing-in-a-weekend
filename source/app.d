@@ -31,22 +31,35 @@ uint[] texture;
 
 Colour rayColour(in Ray ray)
 {
-	if (hitSphere(V3(0.0, 0.0, -1.0), 0.5, ray))
-		return Colour.red;
+	auto t = hitSphere(V3(0.0, 0.0, -1.0), 0.5, ray);
+	if (t > 0.0)
+	{
+		V3 norm = (ray.at(t) - V3(0, 0, -1)).normalised;
+		return cast(Colour)(0.5 * (norm + Colour.one));
+	}
 
 	V3 dir = ray.dir.normalised;
-	double t = 0.5 * (dir.y + 1.0);
+	t = 0.5 * (dir.y + 1.0);
 	return cast(Colour) Colour.one.lerp(Colour(0.5, 0.7, 1.0), t);
 }
 
-bool hitSphere(in V3 center, in double radius, in Ray ray)
+double hitSphere(in V3 center, in double radius, in Ray ray)
 {
 	V3 oc = ray.origin - center;
 	auto a = ray.dir.magnitudeSquared;
 	auto b = 2.0 * oc.dot(ray.dir);
 	auto c = oc.magnitudeSquared - radius ^^ 2;
 	auto discriminant = b * b - 4 * a * c;
-	return discriminant > 0;
+	if (discriminant < 0)
+	{
+		return -1.0;
+	}
+	else
+	{
+		import std.math : sqrt;
+
+		return (-b - discriminant.sqrt) / (2.0 * a);
+	}
 }
 
 void loadScene()
