@@ -112,6 +112,13 @@ union V3
 		return this;
 	}
 
+	string toString() const
+	{
+		import std.string : format;
+
+		return e.format!"[%(%s,%)]";
+	}
+
 	static V3 zero()
 	{
 		return V3(0.0, 0.0, 0.0);
