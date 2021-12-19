@@ -4,8 +4,9 @@ import bindbc.opengl;
 import std.stdio;
 import std.string;
 
-import exception;
 import colour;
+import exception;
+import geometry;
 import ray;
 import v3;
 
@@ -29,42 +30,27 @@ enum V3 blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
 GLuint textureId;
 uint[] texture;
 
-Colour rayColour(in Ray ray)
+Geometry[] world;
+
+Colour rayColour(in Ray ray, in Geometry[] world)
 {
-	auto t = hitSphere(V3(0.0, 0.0, -1.0), 0.5, ray);
-	if (t > 0.0)
+	HitRecord rec;
+	if (world.hit(ray, 0, double.infinity, rec))
 	{
-		V3 norm = (ray.at(t) - V3(0, 0, -1)).normalised;
-		return cast(Colour)(0.5 * (norm + Colour.one));
+		return cast(Colour)(0.5 * (rec.norm + Colour.one));
 	}
 
 	V3 dir = ray.dir.normalised;
-	t = 0.5 * (dir.y + 1.0);
+	const t = 0.5 * (dir.y + 1.0);
 	return cast(Colour) Colour.one.lerp(Colour(0.5, 0.7, 1.0), t);
-}
-
-double hitSphere(in V3 center, in double radius, in Ray ray)
-{
-	V3 oc = ray.origin - center;
-	auto a = ray.dir.magnitudeSquared;
-	auto halfB = oc.dot(ray.dir);
-	auto c = oc.magnitudeSquared - radius ^^ 2;
-	auto discriminant = halfB ^^ 2 - a * c;
-	if (discriminant < 0)
-	{
-		return -1.0;
-	}
-	else
-	{
-		import std.math : sqrt;
-
-		return (-halfB - discriminant.sqrt) / a;
-	}
 }
 
 void loadScene()
 {
 	texture = new uint[](texWidth * texHeight);
+
+	world ~= new Sphere(V3(0.0, -100.5, -1.0), 100);
+	world ~= new Sphere(V3(0.0, 0.0, -1.0), 0.5);
 
 	for (int j = texHeight - 1; j >= 0; --j)
 	{
@@ -75,7 +61,7 @@ void loadScene()
 			const double v = cast(double)(j) / (texHeight - 1);
 
 			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
-			V3 c = rayColour(r);
+			V3 c = rayColour(r, world);
 
 			// dfmt off
 			texture[j * texWidth + i] =
