@@ -61,15 +61,9 @@ void loadScene()
 			const double v = cast(double)(j) / (texHeight - 1);
 
 			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
-			V3 c = rayColour(r, world);
+			Colour c = rayColour(r, world);
 
-			// dfmt off
-			texture[j * texWidth + i] =
-				(cast(int)(  1 * 255)) << 24 |
-				(cast(int)(c.z * 255)) << 16 |
-				(cast(int)(c.y * 255)) <<  8 |
-				(cast(int)(c.x * 255)) <<  0;
-			// dfmt on
+			texture[j * texWidth + i] = c.toUint;
 		}
 	}
 

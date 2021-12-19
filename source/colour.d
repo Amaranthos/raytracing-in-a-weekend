@@ -17,6 +17,17 @@ union Colour
 		_c = V3(r, g, b);
 	}
 
+	uint toUint()
+	{
+		// dfmt off
+		return
+		(cast(int)(1 * 255)) << 24 |
+		(cast(int)(z * 255)) << 16 |
+		(cast(int)(y * 255)) <<  8 |
+		(cast(int)(x * 255)) <<  0;
+	// dfmt on
+	}
+
 	static Colour white()
 	{
 		return Colour(1.0, 1.0, 1.0);
