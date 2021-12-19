@@ -4,6 +4,7 @@ import bindbc.opengl;
 import std.stdio;
 import std.string;
 
+import camera;
 import colour;
 import exception;
 import geometry;
@@ -12,24 +13,18 @@ import v3;
 
 enum double aspectRatio = 16.0 / 9.0;
 
-enum uint texWidth = 500;
+enum uint texWidth = 400;
 enum uint texHeight = cast(uint)(texWidth / aspectRatio);
 
 enum uint winWidth = texWidth;
 enum uint winHeight = texHeight;
 
-enum double viewHeight = 2.0;
-enum double viewWidth = aspectRatio * viewHeight;
-enum double focalLength = 1.0;
-
-enum V3 origin = V3.zero;
-enum V3 hori = V3(viewWidth, 0.0, 0.0);
-enum V3 vert = V3(0.0, viewHeight, 0.0);
-enum V3 blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
+enum uint samplesPerPixel = 100;
 
 GLuint textureId;
 uint[] texture;
 
+Camera cam;
 Geometry[] world;
 
 Colour rayColour(in Ray ray, in Geometry[] world)
@@ -47,6 +42,8 @@ Colour rayColour(in Ray ray, in Geometry[] world)
 
 void loadScene()
 {
+	cam = new Camera();
+
 	texture = new uint[](texWidth * texHeight);
 
 	world ~= new Sphere(V3(0.0, -100.5, -1.0), 100);
@@ -57,13 +54,16 @@ void loadScene()
 		writefln!"lines remaining: %s "(j);
 		foreach (i; 0 .. texWidth)
 		{
-			const double u = cast(double)(i) / (texWidth - 1);
-			const double v = cast(double)(j) / (texHeight - 1);
+			Colour pxlColour = Colour(0.0, 0.0, 0.0);
+			foreach (s; 0 .. samplesPerPixel)
+			{
+				const double u = cast(double)(i) / (texWidth - 1);
+				const double v = cast(double)(j) / (texHeight - 1);
+				Ray r = cam.ray(u, v);
+				pxlColour += rayColour(r, world);
+			}
 
-			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
-			Colour c = rayColour(r, world);
-
-			texture[j * texWidth + i] = c.toUint;
+			texture[j * texWidth + i] = pxlColour.toUint(samplesPerPixel);
 		}
 	}
 

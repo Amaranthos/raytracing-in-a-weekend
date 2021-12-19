@@ -7,7 +7,7 @@ union Colour
 	V3 _c;
 	struct
 	{
-		float r, g, b;
+		double r, g, b;
 	}
 
 	alias _c this;
@@ -22,9 +22,22 @@ union Colour
 		// dfmt off
 		return
 		(cast(int)(1 * 255)) << 24 |
-		(cast(int)(z * 255)) << 16 |
-		(cast(int)(y * 255)) <<  8 |
-		(cast(int)(x * 255)) <<  0;
+		(cast(int)(b * 255)) << 16 |
+		(cast(int)(g * 255)) <<  8 |
+		(cast(int)(r * 255)) <<  0;
+	// dfmt on
+	}
+
+	uint toUint(int samplesPerPxl)
+	{
+		auto c = cast(Colour)(this * (1.0 / samplesPerPxl));
+
+		// dfmt off
+		return
+		(cast(int)(  1 * 255)) << 24 |
+		(cast(int)(c.b * 255)) << 16 |
+		(cast(int)(c.g * 255)) <<  8 |
+		(cast(int)(c.r * 255)) <<  0;
 	// dfmt on
 	}
 
