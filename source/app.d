@@ -47,9 +47,9 @@ double hitSphere(in V3 center, in double radius, in Ray ray)
 {
 	V3 oc = ray.origin - center;
 	auto a = ray.dir.magnitudeSquared;
-	auto b = 2.0 * oc.dot(ray.dir);
+	auto halfB = oc.dot(ray.dir);
 	auto c = oc.magnitudeSquared - radius ^^ 2;
-	auto discriminant = b * b - 4 * a * c;
+	auto discriminant = halfB ^^ 2 - a * c;
 	if (discriminant < 0)
 	{
 		return -1.0;
@@ -58,7 +58,7 @@ double hitSphere(in V3 center, in double radius, in Ray ray)
 	{
 		import std.math : sqrt;
 
-		return (-b - discriminant.sqrt) / (2.0 * a);
+		return (-halfB - discriminant.sqrt) / a;
 	}
 }
 
