@@ -4,6 +4,30 @@ import bindbc.opengl;
 import std.stdio;
 import std.string;
 
+import exception;
+import ray;
+import v3;
+
+enum double aspectRatio = 16.0 / 9.0;
+
+enum uint texWidth = 500;
+enum uint texHeight = cast(uint)(texWidth / aspectRatio);
+
+enum uint winWidth = texWidth;
+enum uint winHeight = texHeight;
+
+enum double viewHeight = 2.0;
+enum double viewWidth = aspectRatio * viewHeight;
+enum double focalLength = 1.0;
+
+enum V3 origin = V3.zero;
+enum V3 hori = V3(viewWidth, 0.0, 0.0);
+enum V3 vert = V3(0.0, viewHeight, 0.0);
+enum V3 blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
+
+GLuint textureId;
+uint[] texture;
+
 int main()
 {
 	SDLSupport sdlStatus = loadSDL();
@@ -21,7 +45,7 @@ int main()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	auto window = SDL_CreateWindow("OpenGL 3.2 App", SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED, 400, 300, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+		SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if (!window)
 		throw new SDLException();
 
@@ -80,143 +104,75 @@ int main()
 	return 0;
 }
 
-//dfmt off
-const float[] vertexBufferPositions = [
-	-0.5f, -0.5f, 0,
-	0.5f, -0.5f, 0,
-	0, 0.5f, 0
-];
-const float[] vertexBufferColors = [
-	1, 0, 0,
-	0, 1, 0,
-	0, 0, 1
-];
-//dfmt on
-GLuint vertexBuffer;
-GLuint colorBuffer;
-GLuint programID;
-GLuint vertexArrayID;
-
 void loadScene()
 {
-	// create OpenGL buffers for vertex position and color data
-	glGenVertexArrays(1, &vertexArrayID);
-	glBindVertexArray(vertexArrayID);
+	texture = new uint[](texWidth * texHeight);
 
-	// load position data
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, float.sizeof * vertexBufferPositions.length,
-		vertexBufferPositions.ptr, GL_STATIC_DRAW);
-
-	// load color data
-	glGenBuffers(1, &colorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, float.sizeof * vertexBufferColors.length,
-		vertexBufferColors.ptr, GL_STATIC_DRAW);
-
-	GLint result;
-	int infoLogLength;
-
-	// compile shaders
-	GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-	const(char*) vertSource = import("shader.vert").toStringz;
-	glShaderSource(vertexShaderID, 1, &vertSource, null);
-	glCompileShader(vertexShaderID);
-	glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
+	for (int j = texHeight - 1; j >= 0; --j)
 	{
-		char* errorMessage;
-		glGetShaderInfoLog(vertexShaderID, infoLogLength, null, errorMessage);
-		writeln(errorMessage[0 .. infoLogLength]);
+		writefln!"lines remaining: %s "(j);
+		foreach (i; 0 .. texWidth)
+		{
+			const double u = cast(double)(i) / (texWidth - 1);
+			const double v = cast(double)(j) / (texHeight - 1);
+
+			Ray r = Ray(origin, blCorner + u * hori + v * vert - origin);
+			V3 c = rayColour(r);
+
+			// dfmt off
+			texture[j * texWidth + i] =
+				(cast(int)(  1 * 255)) << 24 |
+				(cast(int)(c.z * 255)) << 16 |
+				(cast(int)(c.y * 255)) <<  8 |
+				(cast(int)(c.x * 255)) <<  0;
+			// dfmt on
+		}
 	}
 
-	GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-	const(char*) fragSource = import("shader.frag").toStringz;
-	glShaderSource(fragmentShaderID, 1, &fragSource, null);
-	glCompileShader(fragmentShaderID);
-	glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-		char* errorMessage;
-		glGetShaderInfoLog(fragmentShaderID, infoLogLength, null, errorMessage);
-		writeln(errorMessage[0 .. infoLogLength]);
-	}
+	writeln("done...");
 
-	// link shaders
-	programID = glCreateProgram();
-	glAttachShader(programID, vertexShaderID);
-	glAttachShader(programID, fragmentShaderID);
-	glLinkProgram(programID);
-	glGetProgramiv(programID, GL_LINK_STATUS, &result);
-	glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-		char* errorMessage;
-		glGetProgramInfoLog(programID, infoLogLength, null, errorMessage);
-		writeln(errorMessage[0 .. infoLogLength]);
-	}
+	glGenTextures(1, &textureId);
+	glBindTexture(GL_TEXTURE_2D, textureId);
 
-	// Delete unused compiled shaders because program is linked already
-	glDetachShader(programID, vertexShaderID);
-	glDetachShader(programID, fragmentShaderID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	glDeleteShader(vertexShaderID);
-	glDeleteShader(fragmentShaderID);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glFlush();
 }
 
 void unloadScene()
 {
-	glDeleteBuffers(1, &vertexBuffer);
-	glDeleteBuffers(1, &colorBuffer);
-	glDeleteVertexArrays(1, &vertexArrayID);
-	glDeleteProgram(programID);
 }
 
 void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(programID);
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture
+			.ptr);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glVertexAttribPointer(0, // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3, // size
-		GL_FLOAT, // type
-		false, // normalized?
-		0, // stride
-		null  // array buffer offset
-
-		
-
-	);
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glVertexAttribPointer(1, // attribute 1
-		3, // size
-		GL_FLOAT, // type
-		false, // normalized?
-		0, // stride
-		null  // array buffer offset
-
-		
-
-	);
-	// Draw the triangle!
-	glDrawArrays(GL_TRIANGLES, 0, 3); // Starting from vertex 0; 3 vertices total -> 1 triangle
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
+	GLuint fboId;
+	glGenFramebuffers(1, &fboId);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, textureId, 0);
+	glBlitFramebuffer(0, 0, texWidth, texHeight,
+		0, 0, winWidth, winHeight,
+		GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glDeleteFramebuffers(1, &fboId);
 }
 
-/// Exception for SDL related issues
-class SDLException : Exception
+V3 rayColour(in Ray ray)
 {
-	/// Creates an exception from SDL_GetError()
-	this(string file = __FILE__, size_t line = __LINE__) nothrow @nogc
-	{
-		super(cast(string) SDL_GetError().fromStringz, file, line);
-	}
+	V3 dir = ray.dir.normalised;
+	double t = 0.5 * (dir.y + 1.0);
+	return (1.0 - t) * V3.one + t * V3(0.5, 0.7, 1.0);
 }
