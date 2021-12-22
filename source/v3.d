@@ -128,4 +128,29 @@ union V3
 	{
 		return V3(1.0, 1.0, 1.0);
 	}
+
+	static V3 random()
+	{
+		import std.random : uniform01;
+
+		return V3(uniform01, uniform01, uniform01);
+	}
+
+	static V3 random(in double min, in double max)
+	{
+		import std.random : uniform;
+
+		return V3(uniform(min, max), uniform(min, max), uniform(min, max));
+	}
+}
+
+V3 randomPointInUnitSphere()
+{
+	while (true)
+	{
+		auto p = V3.random(-1.0, 1.0);
+		if (p.magnitudeSquared >= 1)
+			continue;
+		return p;
+	}
 }

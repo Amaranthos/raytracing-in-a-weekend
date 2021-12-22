@@ -1,6 +1,7 @@
 import bindbc.sdl;
 import bindbc.opengl;
 
+import std.random;
 import std.stdio;
 import std.string;
 
@@ -20,6 +21,7 @@ enum uint winWidth = texWidth;
 enum uint winHeight = texHeight;
 
 enum uint samplesPerPixel = 100;
+enum uint maxDepth = 50;
 
 GLuint textureId;
 uint[] texture;
@@ -27,12 +29,19 @@ uint[] texture;
 Camera cam;
 Geometry[] world;
 
-Colour rayColour(in Ray ray, in Geometry[] world)
+Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
 {
 	HitRecord rec;
+
+	if (depth <= 0)
+	{
+		return Colour.black;
+	}
+
 	if (world.hit(ray, 0, double.infinity, rec))
 	{
-		return cast(Colour)(0.5 * (rec.norm + Colour.one));
+		V3 target = rec.pos + rec.norm + randomPointInUnitSphere;
+		return cast(Colour)(0.5 * rayColour(Ray(rec.pos, target - rec.pos), world, depth - 1));
 	}
 
 	V3 dir = ray.dir.normalised;
@@ -43,24 +52,22 @@ Colour rayColour(in Ray ray, in Geometry[] world)
 void loadScene()
 {
 	cam = new Camera();
-
 	texture = new uint[](texWidth * texHeight);
-
 	world ~= new Sphere(V3(0.0, -100.5, -1.0), 100);
 	world ~= new Sphere(V3(0.0, 0.0, -1.0), 0.5);
-
-	for (int j = texHeight - 1; j >= 0; --j)
+	foreach (j; 0 .. texHeight)
 	{
-		writefln!"lines remaining: %s "(j);
+		writefln!"lines remaining: %s "(texHeight - j);
 		foreach (i; 0 .. texWidth)
 		{
-			Colour pxlColour = Colour(0.0, 0.0, 0.0);
+			Colour pxlColour = Colour.black;
 			foreach (s; 0 .. samplesPerPixel)
 			{
-				const double u = cast(double)(i) / (texWidth - 1);
-				const double v = cast(double)(j) / (texHeight - 1);
+				const double u = cast(double)(i + uniform01) / (texWidth - 1);
+				const double v = cast(
+					double)(j + uniform01) / (texHeight - 1);
 				Ray r = cam.ray(u, v);
-				pxlColour += rayColour(r, world);
+				pxlColour += rayColour(r, world, maxDepth);
 			}
 
 			texture[j * texWidth + i] = pxlColour.toUint(samplesPerPixel);
@@ -68,18 +75,18 @@ void loadScene()
 	}
 
 	writeln("done...");
-
 	glGenTextures(1, &textureId);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(
+		GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(
+		GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
+	glBindTexture(
+		GL_TEXTURE_2D, 0);
 	glFlush();
 }
 
@@ -90,12 +97,10 @@ void unloadScene()
 void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-
 	glBindTexture(GL_TEXTURE_2D, textureId);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture
 			.ptr);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
 	GLuint fboId;
 	glGenFramebuffers(1, &fboId);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
@@ -119,21 +124,23 @@ int main()
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		throw new SDLException();
-
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(
+		SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(
+		SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(
+		SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	auto window = SDL_CreateWindow("OpenGL 3.2 App", SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if (!window)
 		throw new SDLException();
-
-	const context = SDL_GL_CreateContext(window);
+	const context = SDL_GL_CreateContext(
+		window);
 	if (!context)
 		throw new SDLException();
-
-	if (SDL_GL_SetSwapInterval(1) < 0)
+	if (
+		SDL_GL_SetSwapInterval(1) < 0)
 		writeln("Failed to set VSync");
 
 	GLSupport glStatus = loadOpenGL();
@@ -146,7 +153,6 @@ int main()
 	loadScene();
 	scope (exit)
 		unloadScene();
-
 	bool quit = false;
 	SDL_Event event;
 	while (!quit)
@@ -161,23 +167,19 @@ int main()
 				case SDLK_ESCAPE:
 					quit = true;
 					break;
-
 				default:
 					break;
 				}
 				break;
-
 			case SDL_QUIT:
 				quit = true;
 				break;
-
 			default:
 				break;
 			}
 		}
 
 		renderScene();
-
 		SDL_GL_SwapWindow(window);
 	}
 
