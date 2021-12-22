@@ -24,10 +24,6 @@ class Camera
 		hori = V3(viewWidth, 0.0, 0.0);
 		vert = V3(0.0, viewHeight, 0.0);
 		blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
-
-		import std.stdio : writefln;
-
-		writefln!"%s %s %s %s"(origin, hori, vert, blCorner);
 	}
 
 	Ray ray(in double u, in double v)

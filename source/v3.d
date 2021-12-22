@@ -31,6 +31,15 @@ union V3
 		);
 	}
 
+	V3 hadamard(in V3 rhs) const
+	{
+		V3 r;
+		r.x = x * rhs.x;
+		r.y = y * rhs.y;
+		r.z = z * rhs.z;
+		return r;
+	}
+
 	double dot(in V3 rhs) const
 	{
 		return x * rhs.x + y * rhs.y + z * rhs.z;
@@ -66,6 +75,20 @@ union V3
 	V3 lerp(V3 rhs, double t)
 	{
 		return (1.0 - t) * this + t * rhs;
+	}
+
+	bool nearZero() const
+	{
+		import std.math : abs;
+
+		return x < double.epsilon
+			&& y < double.epsilon
+			&& z < double.epsilon;
+	}
+
+	V3 reflect(in V3 norm) const
+	{
+		return this - 2 * this.dot(norm) * norm;
 	}
 
 	V3 opBinary(string op)(in double rhs) const if (op == "*" || op == "/")

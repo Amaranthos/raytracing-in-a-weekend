@@ -9,6 +9,8 @@ import camera;
 import colour;
 import exception;
 import geometry;
+import hit_record;
+import material;
 import ray;
 import v3;
 
@@ -26,10 +28,7 @@ enum uint maxDepth = 50;
 GLuint textureId;
 uint[] texture;
 
-Camera cam;
-Geometry[] world;
-
-Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
+Colour rayColour(in Ray ray, Geometry[] world, in int depth)
 {
 	HitRecord rec;
 
@@ -40,10 +39,14 @@ Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
 
 	if (world.hit(ray, 0.001, double.infinity, rec))
 	{
-		V3 target = rec.pos + rec.norm + randomUnitVector;
-		// V3 target = rec.pos + rec.norm + randomPointInUnitSphere;
-		// V3 target = rec.pos + randomInHemisphere(rec.norm);
-		return cast(Colour)(0.5 * rayColour(Ray(rec.pos, target - rec.pos), world, depth - 1));
+		Ray scattered;
+		Colour attenuation;
+
+		if (rec.mat.scatter(ray, rec, attenuation, scattered))
+		{
+			return cast(Colour) attenuation.hadamard(rayColour(scattered, world, depth - 1));
+		}
+		return Colour.black;
 	}
 
 	V3 dir = ray.dir.normalised;
@@ -53,10 +56,23 @@ Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
 
 void loadScene()
 {
-	cam = new Camera();
 	texture = new uint[](texWidth * texHeight);
-	world ~= new Sphere(V3(0.0, -100.5, -1.0), 100);
-	world ~= new Sphere(V3(0.0, 0.0, -1.0), 0.5);
+
+	auto cam = new Camera();
+
+	Material matGround = new Lambertian(Colour(0.8, 0.8, 0.0));
+	Material matCenter = new Lambertian(Colour(0.7, 0.3, 0.3));
+	Material matLeft = new Metal(Colour(0.8, 0.8, 0.8));
+	Material matRight = new Metal(Colour(0.8, 0.6, 0.2));
+
+	Geometry[] world;
+	// dfmt off
+	world ~= new Sphere(V3( 0.0, -100.5, -1.0), 100, matGround);
+	world ~= new Sphere(V3( 0.0,    0.0, -1.0), 0.5, matCenter);
+	world ~= new Sphere(V3(-1.0,    0.0, -1.0), 0.5, matLeft);
+	world ~= new Sphere(V3( 1.0,    0.0, -1.0), 0.5, matRight);
+	// dfmt on
+
 	foreach (j; 0 .. texHeight)
 	{
 		writefln!"lines remaining: %s "(texHeight - j);

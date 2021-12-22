@@ -1,39 +1,31 @@
 module geometry;
 
+import std.typecons;
+
+import hit_record;
+import material;
 import ray;
 import v3;
 
-struct HitRecord
-{
-	V3 pos;
-	V3 norm;
-	double t;
-	bool frontFace;
-
-	void setFaceNormal(in Ray ray, in V3 outwardNorm)
-	{
-		frontFace = ray.dir.dot(outwardNorm) < 0;
-		norm = frontFace ? outwardNorm : -outwardNorm;
-	}
-}
-
 interface Geometry
 {
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec) const;
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec);
 }
 
 class Sphere : Geometry
 {
 	V3 pos;
 	double radius;
+	Material mat;
 
-	this(V3 pos, double radius)
+	this(V3 pos, double radius, Material mat)
 	{
 		this.pos = pos;
 		this.radius = radius;
+		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec) const
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		V3 oc = ray.origin - pos;
 		auto a = ray.dir.magnitudeSquared;
@@ -59,20 +51,21 @@ class Sphere : Geometry
 		rec.t = root;
 		rec.pos = ray.at(rec.t);
 		rec.setFaceNormal(ray, (rec.pos - pos) / radius);
+		rec.mat = mat;
 
 		return true;
 	}
 }
 
-bool hit(in Geometry[] geometries, in Ray ray, double tMin, double tMax, out HitRecord rec)
+bool hit(Geometry[] geometries, in Ray ray, double tMin, double tMax, out HitRecord rec)
 {
 	HitRecord subRec;
 	bool hit;
 	auto closest = tMax;
 
-	foreach (geometry; geometries)
+	foreach (ref geometry; geometries)
 	{
-		if (geometry.hit(ray, tMin, tMax, subRec))
+		if (geometry.hit(ray, tMin, closest, subRec))
 		{
 			hit = true;
 			closest = subRec.t;
