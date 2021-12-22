@@ -163,6 +163,21 @@ union V3
 		return V3(1.0, 1.0, 1.0);
 	}
 
+	static V3 up()
+	{
+		return V3(0.0, 1.0, 0.0);
+	}
+
+	static V3 forward()
+	{
+		return V3(0.0, 0.0, 1.0);
+	}
+
+	static V3 right()
+	{
+		return V3(1.0, 0.0, 0.0);
+	}
+
 	static V3 random()
 	{
 		import std.random : uniform01;

@@ -58,7 +58,7 @@ void loadScene()
 {
 	texture = new uint[](texWidth * texHeight);
 
-	auto cam = new Camera();
+	auto cam = new Camera(V3(-2, 2, 1), V3(0, 0, -1), V3.up, 20, aspectRatio);
 
 	Material matGround = new Lambertian(Colour(0.8, 0.8, 0.0));
 	Material matCenter = new Lambertian(Colour(0.1, 0.2, 0.5));
@@ -67,10 +67,10 @@ void loadScene()
 
 	Geometry[] world;
 	// dfmt off
-	world ~= new Sphere(V3( 0.0, -100.5, -1.0),  100, matGround);
-	world ~= new Sphere(V3( 0.0,    0.0, -1.0),  0.5, matCenter);
-	world ~= new Sphere(V3(-1.0,    0.0, -1.0), -0.4, matLeft);
-	world ~= new Sphere(V3( 1.0,    0.0, -1.0),  0.5, matRight);
+	world ~= new Sphere(V3( 0.0, -100.5, -1.0),   100, matGround);
+	world ~= new Sphere(V3( 0.0,    0.0, -1.0),   0.5, matCenter);
+	world ~= new Sphere(V3(-1.0,    0.0, -1.0), -0.45, matLeft);
+	world ~= new Sphere(V3( 1.0,    0.0, -1.0),   0.5, matRight);
 	// dfmt on
 
 	foreach (j; 0 .. texHeight)

@@ -3,11 +3,6 @@ module camera;
 import ray;
 import v3;
 
-enum double aspectRatio = 16.0 / 9.0;
-enum double viewHeight = 2.0;
-enum double viewWidth = aspectRatio * viewHeight;
-enum double focalLength = 1.0;
-
 class Camera
 {
 	private
@@ -18,16 +13,28 @@ class Camera
 		V3 blCorner;
 	}
 
-	this()
+	this(V3 pos, V3 lookAt, V3 up, double vfov, double aspectRatio)
 	{
-		origin = V3.zero;
-		hori = V3(viewWidth, 0.0, 0.0);
-		vert = V3(0.0, viewHeight, 0.0);
-		blCorner = origin - hori / 2.0 - vert / 2.0 - V3(0.0, 0.0, focalLength);
+		import math : deg2Rad;
+		import std.math : tan;
+
+		const theta = vfov.deg2Rad;
+		const h = tan(theta / 2);
+		const viewHeight = 2.0 * h;
+		const viewWidth = aspectRatio * viewHeight;
+
+		const w = (pos - lookAt).normalised;
+		const u = up.cross(w).normalised;
+		const v = w.cross(u);
+
+		origin = pos;
+		hori = viewWidth * u;
+		vert = viewHeight * v;
+		blCorner = origin - hori / 2.0 - vert / 2.0 - w;
 	}
 
-	Ray ray(in double u, in double v)
+	Ray ray(in double s, in double t)
 	{
-		return Ray(origin, blCorner + u * hori + v * vert - origin);
+		return Ray(origin, blCorner + s * hori + t * vert - origin);
 	}
 }
