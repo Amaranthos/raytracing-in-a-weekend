@@ -154,3 +154,8 @@ V3 randomPointInUnitSphere()
 		return p;
 	}
 }
+
+V3 randomUnitVector()
+{
+	return randomPointInUnitSphere.normalised;
+}

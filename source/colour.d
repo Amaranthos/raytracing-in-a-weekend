@@ -17,7 +17,7 @@ union Colour
 		_c = V3(r, g, b);
 	}
 
-	uint toUint()
+	uint toUint() const
 	{
 		// dfmt off
 		return
@@ -28,17 +28,11 @@ union Colour
 	// dfmt on
 	}
 
-	uint toUint(int samplesPerPxl)
+	Colour gammaCorrect() const
 	{
-		auto c = cast(Colour)(this * (1.0 / samplesPerPxl));
+		import std.math : sqrt;
 
-		// dfmt off
-		return
-		(cast(int)(  1 * 255)) << 24 |
-		(cast(int)(c.b * 255)) << 16 |
-		(cast(int)(c.g * 255)) <<  8 |
-		(cast(int)(c.r * 255)) <<  0;
-	// dfmt on
+		return Colour(sqrt(r), sqrt(g), sqrt(b));
 	}
 
 	static Colour white()

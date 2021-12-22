@@ -38,9 +38,9 @@ Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
 		return Colour.black;
 	}
 
-	if (world.hit(ray, 0, double.infinity, rec))
+	if (world.hit(ray, 0.001, double.infinity, rec))
 	{
-		V3 target = rec.pos + rec.norm + randomPointInUnitSphere;
+		V3 target = rec.pos + rec.norm + randomUnitVector;
 		return cast(Colour)(0.5 * rayColour(Ray(rec.pos, target - rec.pos), world, depth - 1));
 	}
 
@@ -70,7 +70,12 @@ void loadScene()
 				pxlColour += rayColour(r, world, maxDepth);
 			}
 
-			texture[j * texWidth + i] = pxlColour.toUint(samplesPerPixel);
+			enum invSamples = 1.0 / samplesPerPixel;
+
+			texture[j * texWidth + i] =
+				(cast(Colour)(pxlColour * invSamples))
+				.gammaCorrect
+				.toUint;
 		}
 	}
 
