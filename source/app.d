@@ -61,9 +61,9 @@ void loadScene()
 	auto cam = new Camera();
 
 	Material matGround = new Lambertian(Colour(0.8, 0.8, 0.0));
-	Material matCenter = new Lambertian(Colour(0.7, 0.3, 0.3));
-	Material matLeft = new Metal(Colour(0.8, 0.8, 0.8), 0.3);
-	Material matRight = new Metal(Colour(0.8, 0.6, 0.2), 1.0);
+	Material matCenter = new Lambertian(Colour(0.1, 0.2, 0.5));
+	Material matLeft = new Dielectric(1.5);
+	Material matRight = new Metal(Colour(0.8, 0.6, 0.2), 0.0);
 
 	Geometry[] world;
 	// dfmt off

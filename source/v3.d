@@ -91,6 +91,17 @@ union V3
 		return this - 2 * this.dot(norm) * norm;
 	}
 
+	V3 refract(in V3 norm, in double refractiveRatio) const
+	{
+		import std.algorithm : min;
+		import std.math : abs, sqrt;
+
+		const cosTheta = min(-this.dot(norm), 1.0);
+		V3 rPrimePerp = refractiveRatio * (this + cosTheta * norm);
+		V3 rPrimePara = -sqrt(abs(1.0 - rPrimePerp.magnitudeSquared)) * norm;
+		return rPrimePerp + rPrimePara;
+	}
+
 	V3 opBinary(string op)(in double rhs) const if (op == "*" || op == "/")
 	{
 		V3 r;
