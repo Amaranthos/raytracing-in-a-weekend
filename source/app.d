@@ -41,6 +41,8 @@ Colour rayColour(in Ray ray, in Geometry[] world, in int depth)
 	if (world.hit(ray, 0.001, double.infinity, rec))
 	{
 		V3 target = rec.pos + rec.norm + randomUnitVector;
+		// V3 target = rec.pos + rec.norm + randomPointInUnitSphere;
+		// V3 target = rec.pos + randomInHemisphere(rec.norm);
 		return cast(Colour)(0.5 * rayColour(Ray(rec.pos, target - rec.pos), world, depth - 1));
 	}
 

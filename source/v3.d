@@ -159,3 +159,9 @@ V3 randomUnitVector()
 {
 	return randomPointInUnitSphere.normalised;
 }
+
+V3 randomInHemisphere(in V3 normal)
+{
+	V3 inUnitSphere = randomPointInUnitSphere;
+	return normal.dot(inUnitSphere) > 0.0 ? inUnitSphere : -inUnitSphere;
+}
