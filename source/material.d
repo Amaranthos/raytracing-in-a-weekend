@@ -39,16 +39,18 @@ class Lambertian : Material
 class Metal : Material
 {
 	Colour albedo;
+	double roughness;
 
-	this(Colour albedo)
+	this(Colour albedo, double roughness)
 	{
 		this.albedo = albedo;
+		this.roughness = roughness < 1 ? roughness : 1;
 	}
 
 	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
 	{
 		V3 reflected = ray.dir.normalised.reflect(rec.norm);
-		scattered = Ray(rec.pos, reflected);
+		scattered = Ray(rec.pos, reflected + roughness * randomPointInUnitSphere);
 		attenuation = albedo;
 		return (scattered.dir.dot(rec.norm) > 0);
 	}
