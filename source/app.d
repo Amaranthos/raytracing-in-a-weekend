@@ -67,10 +67,10 @@ void loadScene()
 
 	Geometry[] world;
 	// dfmt off
-	world ~= new Sphere(V3( 0.0, -100.5, -1.0), 100, matGround);
-	world ~= new Sphere(V3( 0.0,    0.0, -1.0), 0.5, matCenter);
-	world ~= new Sphere(V3(-1.0,    0.0, -1.0), 0.5, matLeft);
-	world ~= new Sphere(V3( 1.0,    0.0, -1.0), 0.5, matRight);
+	world ~= new Sphere(V3( 0.0, -100.5, -1.0),  100, matGround);
+	world ~= new Sphere(V3( 0.0,    0.0, -1.0),  0.5, matCenter);
+	world ~= new Sphere(V3(-1.0,    0.0, -1.0), -0.4, matLeft);
+	world ~= new Sphere(V3( 1.0,    0.0, -1.0),  0.5, matRight);
 	// dfmt on
 
 	foreach (j; 0 .. texHeight)

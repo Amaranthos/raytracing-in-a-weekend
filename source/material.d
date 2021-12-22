@@ -74,14 +74,23 @@ class Dielectric : Material
 
 		import std.algorithm : min;
 		import std.math : sqrt;
+		import std.random : uniform01;
 
 		const cosTheta = min(-unitDir.dot(rec.norm), 1.0);
 		const sinTheta = sqrt(1.0 - cosTheta ^^ 2);
 
-		V3 direction = (refractiveRatio * sinTheta > 1.0) ? unitDir.reflect(
+		bool willReflect = (refractiveRatio * sinTheta > 1.0) || reflectance(cosTheta, refractiveRatio) > uniform01;
+		V3 direction = willReflect ? unitDir.reflect(
 			rec.norm) : unitDir.refract(rec.norm, refractiveRatio);
 
 		scattered = Ray(rec.pos, direction);
 		return true;
+	}
+
+	private double reflectance(double cosine, double refractiveRatio) const
+	{
+		const r0 = ((1 - refractiveRatio) / (1 + refractiveRatio)) ^^ 2;
+
+		return r0 + (1 - r0) * ((1 - cosine) ^^ 5);
 	}
 }
