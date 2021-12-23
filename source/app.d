@@ -14,15 +14,15 @@ import material;
 import ray;
 import v3;
 
-enum double aspectRatio = 16.0 / 9.0;
+enum double aspectRatio = 3.0 / 2.0;
 
-enum uint texWidth = 400;
+enum uint texWidth = 1200;
 enum uint texHeight = cast(uint)(texWidth / aspectRatio);
 
 enum uint winWidth = texWidth;
 enum uint winHeight = texHeight;
 
-enum uint samplesPerPixel = 100;
+enum uint samplesPerPixel = 500;
 enum uint maxDepth = 50;
 
 GLuint textureId;
@@ -58,22 +58,56 @@ void loadScene()
 {
 	texture = new uint[](texWidth * texHeight);
 
-	V3 camPos = V3(3, 3, 2);
-	V3 lookAt = V3(0, 0, -1);
-	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 2.0, (camPos - lookAt).magnitude);
-
-	Material matGround = new Lambertian(Colour(0.8, 0.8, 0.0));
-	Material matCenter = new Lambertian(Colour(0.1, 0.2, 0.5));
-	Material matLeft = new Dielectric(1.5);
-	Material matRight = new Metal(Colour(0.8, 0.6, 0.2), 0.0);
+	V3 camPos = V3(13, 2, 3);
+	V3 lookAt = V3(0, 0, 0);
+	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 0.1, 10.0);
 
 	Geometry[] world;
-	// dfmt off
-	world ~= new Sphere(V3( 0.0, -100.5, -1.0),   100, matGround);
-	world ~= new Sphere(V3( 0.0,    0.0, -1.0),   0.5, matCenter);
-	world ~= new Sphere(V3(-1.0,    0.0, -1.0), -0.45, matLeft);
-	world ~= new Sphere(V3( 1.0,    0.0, -1.0),   0.5, matRight);
-	// dfmt on
+
+	Material matGround = new Lambertian(Colour(0.5, 0.5, 0.5));
+	world ~= new Sphere(V3(0.0, -1000, 0), 1000, matGround);
+
+	foreach (a; -11 .. 11)
+	{
+		foreach (b; -11 .. 11)
+		{
+			auto matChoice = uniform01;
+			V3 center = V3(a + 0.9 * uniform01, 0.2, b + 0.9 * uniform01);
+
+			if ((center - V3(4, 0.2, 0)).magnitude > 0.9)
+			{
+				Material mat;
+
+				if (matChoice < 0.8)
+				{
+					auto albedo = Colour.random().hadamard(Colour.random());
+					mat = new Lambertian(cast(Colour) albedo);
+					world ~= new Sphere(center, 0.2, mat);
+				}
+				else if (matChoice < 0.95)
+				{
+					auto albedo = Colour.random(0.5, 1.0);
+					auto roughness = uniform(0.0, 0.5);
+					mat = new Metal(albedo, roughness);
+					world ~= new Sphere(center, 0.2, mat);
+				}
+				else
+				{
+					mat = new Dielectric(1.5);
+					world ~= new Sphere(center, 0.2, mat);
+				}
+			}
+		}
+	}
+
+	auto mat1 = new Dielectric(1.5);
+	world ~= new Sphere(V3(0, 1, 0), 1.0, mat1);
+
+	auto mat2 = new Lambertian(Colour(0.4, 0.2, 0.1));
+	world ~= new Sphere(V3(-4, 1, 0), 1.0, mat2);
+
+	auto mat3 = new Metal(Colour(0.7, 0.6, 0.5), 0.0);
+	world ~= new Sphere(V3(4, 1, 0), 1.0, mat3);
 
 	foreach (j; 0 .. texHeight)
 	{

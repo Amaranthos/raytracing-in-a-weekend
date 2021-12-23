@@ -74,4 +74,20 @@ union Colour
 	{
 		return Colour(1.0, 0.0, 1.0);
 	}
+
+	static Colour random()
+	{
+		import std.random : uniform01;
+
+		return Colour(uniform01, uniform01, uniform01);
+	}
+
+	static Colour random(double min, double max)
+	in (min >= 0.0)
+	in (max <= 1.0)
+	{
+		import std.random : uniform;
+
+		return Colour(uniform(min, max), uniform(min, max), uniform(min, max));
+	}
 }
