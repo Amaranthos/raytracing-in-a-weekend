@@ -58,7 +58,9 @@ void loadScene()
 {
 	texture = new uint[](texWidth * texHeight);
 
-	auto cam = new Camera(V3(-2, 2, 1), V3(0, 0, -1), V3.up, 20, aspectRatio);
+	V3 camPos = V3(3, 3, 2);
+	V3 lookAt = V3(0, 0, -1);
+	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 2.0, (camPos - lookAt).magnitude);
 
 	Material matGround = new Lambertian(Colour(0.8, 0.8, 0.0));
 	Material matCenter = new Lambertian(Colour(0.1, 0.2, 0.5));

@@ -96,7 +96,7 @@ union V3
 		import std.algorithm : min;
 		import std.math : abs, sqrt;
 
-		const cosTheta = min(-this.dot(norm), 1.0);
+		const cosTheta = min(norm.dot(-this), 1.0);
 		V3 rPrimePerp = refractiveRatio * (this + cosTheta * norm);
 		V3 rPrimePara = -sqrt(abs(1.0 - rPrimePerp.magnitudeSquared)) * norm;
 		return rPrimePerp + rPrimePara;
@@ -198,6 +198,19 @@ V3 randomPointInUnitSphere()
 	while (true)
 	{
 		auto p = V3.random(-1.0, 1.0);
+		if (p.magnitudeSquared >= 1)
+			continue;
+		return p;
+	}
+}
+
+V3 randomPointInUnitDisk()
+{
+	import std.random : uniform01;
+
+	while (true)
+	{
+		auto p = V3(uniform01, uniform01, 0.0);
 		if (p.magnitudeSquared >= 1)
 			continue;
 		return p;
