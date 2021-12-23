@@ -16,13 +16,13 @@ import v3;
 
 enum double aspectRatio = 3.0 / 2.0;
 
-enum uint texWidth = 1200;
+enum uint texWidth = 400;
 enum uint texHeight = cast(uint)(texWidth / aspectRatio);
 
 enum uint winWidth = texWidth;
 enum uint winHeight = texHeight;
 
-enum uint samplesPerPixel = 500;
+enum uint samplesPerPixel = 100;
 enum uint maxDepth = 50;
 
 GLuint textureId;
@@ -67,9 +67,9 @@ void loadScene()
 	Material matGround = new Lambertian(Colour(0.5, 0.5, 0.5));
 	world ~= new Sphere(V3(0.0, -1000, 0), 1000, matGround);
 
-	foreach (a; -11 .. 11)
+	foreach (a; -3 .. 3)
 	{
-		foreach (b; -11 .. 11)
+		foreach (b; -3 .. 3)
 		{
 			auto matChoice = uniform01;
 			V3 center = V3(a + 0.9 * uniform01, 0.2, b + 0.9 * uniform01);
@@ -109,14 +109,19 @@ void loadScene()
 	auto mat3 = new Metal(Colour(0.7, 0.6, 0.5), 0.0);
 	world ~= new Sphere(V3(4, 1, 0), 1.0, mat3);
 
+	enum char[] spinner = ['\\', '|', '/', '-'];
+
+	writeln;
 	foreach (j; 0 .. texHeight)
 	{
-		writefln!"lines remaining: %s "(texHeight - j);
+		writef!"\r %s lines remaining: %3d"(spinner[j % $], texHeight - j);
+		std.stdio.stdout.flush;
 		foreach (i; 0 .. texWidth)
 		{
 			Colour pxlColour = Colour.black;
 			foreach (s; 0 .. samplesPerPixel)
 			{
+
 				const double u = cast(double)(i + uniform01) / (texWidth - 1);
 				const double v = cast(
 					double)(j + uniform01) / (texHeight - 1);
@@ -133,7 +138,7 @@ void loadScene()
 		}
 	}
 
-	writeln("done...");
+	writeln("\ndone...");
 	glGenTextures(1, &textureId);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 
