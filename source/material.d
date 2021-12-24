@@ -3,6 +3,7 @@ module material;
 import colour;
 import hit_record;
 import ray;
+import texture;
 import v3;
 
 interface Material
@@ -12,9 +13,14 @@ interface Material
 
 class Lambertian : Material
 {
-	Colour albedo;
+	Texture albedo;
 
 	this(Colour albedo)
+	{
+		this.albedo = new SolidColour(albedo);
+	}
+
+	this(Texture albedo)
 	{
 		this.albedo = albedo;
 	}
@@ -31,7 +37,7 @@ class Lambertian : Material
 		}
 
 		scattered = Ray(rec.pos, scatterDir, ray.time);
-		attenuation = albedo;
+		attenuation = albedo.value(rec.u, rec.v, rec.pos);
 		return true;
 	}
 }

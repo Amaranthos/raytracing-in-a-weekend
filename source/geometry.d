@@ -52,8 +52,10 @@ class Sphere : Geometry
 
 		rec.t = root;
 		rec.pos = ray.at(rec.t);
-		rec.setFaceNormal(ray, (rec.pos - pos) / radius);
+		const outwardNorm = (rec.pos - pos) / radius;
+		rec.setFaceNormal(ray, outwardNorm);
 		rec.mat = mat;
+		getSphereUVs(rec.norm, rec.u, rec.v);
 
 		return true;
 	}
@@ -108,8 +110,10 @@ class MovingSphere : Geometry
 
 		rec.t = root;
 		rec.pos = ray.at(rec.t);
-		rec.setFaceNormal(ray, (rec.pos - pos(ray.time)) / radius);
+		const outwardNorm = (rec.pos - pos(ray.time)) / radius;
+		rec.setFaceNormal(ray, outwardNorm);
 		rec.mat = mat;
+		getSphereUVs(rec.norm, rec.u, rec.v);
 
 		return true;
 	}

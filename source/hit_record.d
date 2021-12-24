@@ -12,6 +12,8 @@ struct HitRecord
 	V3 norm;
 	Material mat;
 	double t;
+	double u;
+	double v;
 	bool frontFace;
 
 	void setFaceNormal(in Ray ray, in V3 outwardNorm)
