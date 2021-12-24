@@ -16,6 +16,24 @@ static this()
 	permZ = generatePerm;
 }
 
+public double turb(V3 point, int depth = 7)
+{
+	auto accum = 0.0;
+	auto tmpP = point;
+	auto weight = 1.0;
+
+	foreach (i; 0 .. depth)
+	{
+		accum += weight * noise(tmpP);
+		weight *= 0.5;
+		tmpP *= 2;
+	}
+
+	import std.math : abs;
+
+	return abs(accum);
+}
+
 public double noise(in V3 point)
 {
 	import std.math : floor;

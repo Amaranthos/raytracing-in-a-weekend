@@ -60,8 +60,8 @@ class Noise : Texture
 
 	Colour value(double u, double v, in V3 point) const
 	{
-		import perlin : noise;
+		import perlin : turb;
 
-		return cast(Colour)(Colour.white * 0.5 * (1.0 + noise(point * scale)));
+		return cast(Colour)(Colour.white * turb(point * scale));
 	}
 }
