@@ -10,6 +10,7 @@ import colour;
 import exception;
 import geometry;
 import hit_record;
+import lights;
 import material;
 import ray;
 import texture;
@@ -23,13 +24,12 @@ enum uint texHeight = cast(uint)(texWidth / aspectRatio);
 enum uint winWidth = texWidth;
 enum uint winHeight = texHeight;
 
-enum uint samplesPerPixel = 100;
 enum uint maxDepth = 50;
 
 GLuint textureId;
 uint[] outBuffer;
 
-Colour rayColour(in Ray ray, Geometry[] world, in int depth)
+Colour rayColour(in Ray ray, in Colour background, Geometry[] world, in int depth)
 {
 	HitRecord rec;
 
@@ -38,21 +38,20 @@ Colour rayColour(in Ray ray, Geometry[] world, in int depth)
 		return Colour.black;
 	}
 
-	if (world.hit(ray, 0.001, double.infinity, rec))
+	if (!world.hit(ray, 0.001, double.infinity, rec))
 	{
-		Ray scattered;
-		Colour attenuation;
-
-		if (rec.mat.scatter(ray, rec, attenuation, scattered))
-		{
-			return cast(Colour) attenuation.hadamard(rayColour(scattered, world, depth - 1));
-		}
-		return Colour.black;
+		return background;
 	}
 
-	V3 dir = ray.dir.normalised;
-	const t = 0.5 * (dir.y + 1.0);
-	return cast(Colour) Colour.one.lerp(Colour(0.5, 0.7, 1.0), t);
+	Ray scattered;
+	Colour attenuation;
+	Colour emitted = rec.mat.emitted(rec.u, rec.v, rec.pos);
+
+	if (!rec.mat.scatter(ray, rec, attenuation, scattered))
+	{
+		return emitted;
+	}
+	return cast(Colour)(emitted + attenuation.hadamard(rayColour(scattered, background, world, depth - 1)));
 }
 
 void loadScene()
@@ -65,11 +64,14 @@ void loadScene()
 	V3 lookAt;
 	auto vFov = 40.0;
 	auto aperture = 0.0;
+	Colour background = Colour.black;
+	uint samplesPerPixel = 100;
 
 	switch (0)
 	{
 	case 1:
 		world = randomWorld();
+		background = Colour(0.7, 0.8, 1.0);
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
 		vFov = 20.0;
@@ -78,6 +80,7 @@ void loadScene()
 
 	case 2:
 		world = twoSpheres();
+		background = Colour(0.7, 0.8, 1.0);
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
 		vFov = 20.0;
@@ -85,16 +88,26 @@ void loadScene()
 
 	case 3:
 		world = twoPerlinSpheres();
+		background = Colour(0.7, 0.8, 1.0);
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
 		vFov = 20.0;
 		break;
 
 	case 4:
-	default:
 		world = earth();
+		background = Colour(0.7, 0.8, 1.0);
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
+		vFov = 20.0;
+		break;
+
+	case 5:
+	default:
+		world = simpleLight();
+		samplesPerPixel = 400;
+		camPos = V3(26, 3, 6);
+		lookAt = V3(0, 2, 0);
 		vFov = 20.0;
 		break;
 	}
@@ -103,6 +116,8 @@ void loadScene()
 	auto cam = new Camera(camPos, lookAt, V3.up, vFov, aspectRatio, aperture, distanceToFocus, 0.0, 1.0);
 
 	enum char[] spinner = ['\\', '|', '/', '-'];
+
+	const invSamples = 1.0 / samplesPerPixel;
 
 	writeln;
 	foreach (j; 0 .. texHeight)
@@ -119,10 +134,8 @@ void loadScene()
 				const double v = cast(
 					double)(j + uniform01) / (texHeight - 1);
 				Ray r = cam.ray(u, v);
-				pxlColour += rayColour(r, world, maxDepth);
+				pxlColour += rayColour(r, background, world, maxDepth);
 			}
-
-			enum invSamples = 1.0 / samplesPerPixel;
 
 			outBuffer[j * texWidth + i] =
 				(cast(Colour)(pxlColour * invSamples))
@@ -338,6 +351,21 @@ Geometry[] earth()
 	auto tex = new Image("public/earthmap.jpg");
 	auto surf = new Lambertian(tex);
 	world ~= new Sphere(V3(0, 0, 0), 2, surf);
+
+	return world;
+}
+
+Geometry[] simpleLight()
+{
+	Geometry[] world;
+
+	auto tex = new Noise(4);
+
+	world ~= new Sphere(V3(0, -1000, 0), 1000, new Lambertian(tex));
+	world ~= new Sphere(V3(0, 2, 0), 2, new Lambertian(tex));
+
+	auto light = new DiffuseLight(Colour(4, 4, 4));
+	world ~= new BoxXY(3, 5, 1, 3, -2, light);
 
 	return world;
 }

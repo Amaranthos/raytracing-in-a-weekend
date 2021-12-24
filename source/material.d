@@ -9,6 +9,7 @@ import v3;
 interface Material
 {
 	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const;
+	Colour emitted(double u, double v, in V3 point) const;
 }
 
 class Lambertian : Material
@@ -40,6 +41,11 @@ class Lambertian : Material
 		attenuation = albedo.value(rec.u, rec.v, rec.pos);
 		return true;
 	}
+
+	Colour emitted(double u, double v, in V3 point) const
+	{
+		return Colour.black;
+	}
 }
 
 class Metal : Material
@@ -59,6 +65,11 @@ class Metal : Material
 		scattered = Ray(rec.pos, reflected + roughness * randomPointInUnitSphere, ray.time);
 		attenuation = albedo;
 		return (scattered.dir.dot(rec.norm) > 0);
+	}
+
+	Colour emitted(double u, double v, in V3 point) const
+	{
+		return Colour.black;
 	}
 }
 
@@ -92,6 +103,11 @@ class Dielectric : Material
 
 		scattered = Ray(rec.pos, direction, ray.time);
 		return true;
+	}
+
+	Colour emitted(double u, double v, in V3 point) const
+	{
+		return Colour.black;
 	}
 
 	private double reflectance(double cosine, double refractiveRatio) const

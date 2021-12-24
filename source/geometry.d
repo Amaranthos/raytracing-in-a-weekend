@@ -135,6 +135,51 @@ class MovingSphere : Geometry
 	}
 }
 
+class BoxXY : Geometry
+{
+	Material mat;
+	double x0, x1, y0, y1, k;
+
+	this(double x0, double x1, double y0, double y1, double k, Material mat)
+	{
+		this.x0 = x0;
+		this.x1 = x1;
+		this.y0 = y0;
+		this.y1 = y1;
+		this.k = k;
+		this.mat = mat;
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		auto t = (k - ray.origin.z) / ray.dir.z;
+		if (t < tMin || t > tMax)
+			return false;
+
+		auto x = ray.origin.x + t * ray.dir.x;
+		auto y = ray.origin.y + t * ray.dir.y;
+
+		if (x < x0 || x > x1 || y < y0 || y > y1)
+			return false;
+
+		auto outwardNorm = V3.forward;
+		rec.u = (x - x0) / (x1 - x0);
+		rec.v = (y - y0) / (y1 - y0);
+		rec.t = t;
+		rec.setFaceNormal(ray, outwardNorm);
+		rec.mat = mat;
+		rec.pos = ray.at(t);
+
+		return true;
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		boundingBox = AABB(V3(x0, y0, k - double.epsilon), V3(x1, y1, k + double.epsilon));
+		return true;
+	}
+}
+
 bool hit(Geometry[] geometries, in Ray ray, double tMin, double tMax, out HitRecord rec)
 {
 	HitRecord subRec;
