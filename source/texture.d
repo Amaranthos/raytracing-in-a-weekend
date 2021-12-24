@@ -51,10 +51,17 @@ class Checker : Texture
 
 class Noise : Texture
 {
+	double scale;
+
+	this(double scale)
+	{
+		this.scale = scale;
+	}
+
 	Colour value(double u, double v, in V3 point) const
 	{
 		import perlin : noise;
 
-		return cast(Colour)(Colour.white * noise(point));
+		return cast(Colour)(Colour.white * noise(point * scale));
 	}
 }

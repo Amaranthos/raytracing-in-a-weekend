@@ -309,7 +309,7 @@ Geometry[] twoPerlinSpheres()
 {
 	Geometry[] world;
 
-	auto tex = new Noise();
+	auto tex = new Noise(4);
 
 	world ~= new Sphere(V3(0, -1000, 0), 1000, new Lambertian(tex));
 	world ~= new Sphere(V3(0, 2, 0), 2, new Lambertian(tex));
