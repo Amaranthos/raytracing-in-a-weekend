@@ -74,7 +74,9 @@ union V3
 
 	V3 lerp(V3 rhs, double t)
 	{
-		return (1.0 - t) * this + t * rhs;
+		import math : lerp;
+
+		return lerp(this, rhs, t);
 	}
 
 	bool nearZero() const

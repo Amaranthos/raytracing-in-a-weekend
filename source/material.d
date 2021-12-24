@@ -30,7 +30,7 @@ class Lambertian : Material
 			scatterDir = rec.norm;
 		}
 
-		scattered = Ray(rec.pos, scatterDir);
+		scattered = Ray(rec.pos, scatterDir, ray.time);
 		attenuation = albedo;
 		return true;
 	}
@@ -50,7 +50,7 @@ class Metal : Material
 	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
 	{
 		V3 reflected = ray.dir.normalised.reflect(rec.norm);
-		scattered = Ray(rec.pos, reflected + roughness * randomPointInUnitSphere);
+		scattered = Ray(rec.pos, reflected + roughness * randomPointInUnitSphere, ray.time);
 		attenuation = albedo;
 		return (scattered.dir.dot(rec.norm) > 0);
 	}
@@ -84,7 +84,7 @@ class Dielectric : Material
 		V3 direction = willReflect ? unitDir.reflect(
 			rec.norm) : unitDir.refract(rec.norm, refractiveRatio);
 
-		scattered = Ray(rec.pos, direction);
+		scattered = Ray(rec.pos, direction, ray.time);
 		return true;
 	}
 

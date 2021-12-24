@@ -13,9 +13,17 @@ class Camera
 		V3 blCorner;
 		V3 u, v, w;
 		double lensRadius;
+		double t0, t1;
 	}
 
-	this(V3 pos, V3 lookAt, V3 up, double vfov, double aspectRatio, double aperture, double focusDistance)
+	this(
+		V3 pos,
+		V3 lookAt,
+		V3 up,
+		double vfov, double aspectRatio,
+		double aperture, double focusDistance,
+		double t0 = 0.0, double t1 = 0.0
+	)
 	{
 		import math : deg2Rad;
 		import std.math : tan;
@@ -35,6 +43,9 @@ class Camera
 		blCorner = origin - hori / 2.0 - vert / 2.0 - focusDistance * w;
 
 		lensRadius = aperture / 2;
+
+		this.t0 = t0;
+		this.t1 = t1;
 	}
 
 	Ray ray(in double s, in double t)
@@ -42,6 +53,9 @@ class Camera
 		V3 rd = lensRadius * randomPointInUnitDisk;
 		V3 offset = u * rd.x + v * rd.y;
 
-		return Ray(origin + offset, blCorner + s * hori + t * vert - origin - offset);
+		import std.random : uniform;
+
+		return Ray(origin + offset, blCorner + s * hori + t * vert - origin - offset, t1 > 0 ? uniform(t0, t1)
+				: 0.0);
 	}
 }

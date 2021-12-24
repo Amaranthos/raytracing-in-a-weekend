@@ -14,7 +14,7 @@ import material;
 import ray;
 import v3;
 
-enum double aspectRatio = 3.0 / 2.0;
+enum double aspectRatio = 16.0 / 9.0;
 
 enum uint texWidth = 400;
 enum uint texHeight = cast(uint)(texWidth / aspectRatio);
@@ -60,16 +60,16 @@ void loadScene()
 
 	V3 camPos = V3(13, 2, 3);
 	V3 lookAt = V3(0, 0, 0);
-	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 0.1, 10.0);
+	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 0.1, 10.0, 0.0, 1.0);
 
 	Geometry[] world;
 
 	Material matGround = new Lambertian(Colour(0.5, 0.5, 0.5));
 	world ~= new Sphere(V3(0.0, -1000, 0), 1000, matGround);
 
-	foreach (a; -3 .. 3)
+	foreach (a; -6 .. 6)
 	{
-		foreach (b; -3 .. 3)
+		foreach (b; -6 .. 6)
 		{
 			auto matChoice = uniform01;
 			V3 center = V3(a + 0.9 * uniform01, 0.2, b + 0.9 * uniform01);
@@ -82,7 +82,8 @@ void loadScene()
 				{
 					auto albedo = Colour.random().hadamard(Colour.random());
 					mat = new Lambertian(cast(Colour) albedo);
-					world ~= new Sphere(center, 0.2, mat);
+					auto center2 = center + V3(0, uniform(0.0, 0.5), 0);
+					world ~= new MovingSphere(center, center2, 0.0, 1.0, 0.2, mat);
 				}
 				else if (matChoice < 0.95)
 				{
