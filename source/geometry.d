@@ -178,7 +178,7 @@ void getSphereUVs(in V3 point, out double u, out double v)
 	import std.math : acos, atan2, PI;
 
 	auto theta = acos(-point.y);
-	auto phi = atan2(-point.z, -point.x) + PI;
+	auto phi = atan2(-point.z, point.x) + PI;
 
 	u = phi / (2 * PI);
 	v = theta / PI;

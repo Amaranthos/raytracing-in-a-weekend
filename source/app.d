@@ -84,8 +84,15 @@ void loadScene()
 		break;
 
 	case 3:
-	default:
 		world = twoPerlinSpheres();
+		camPos = V3(13, 2, 3);
+		lookAt = V3(0, 0, 0);
+		vFov = 20.0;
+		break;
+
+	case 4:
+	default:
+		world = earth();
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
 		vFov = 20.0;
@@ -197,6 +204,13 @@ int main()
 	if (glStatus < glSupport)
 	{
 		writeln("Failed loading minimum required OpenGL version: ", glStatus);
+		return 1;
+	}
+
+	SDLImageSupport sdlImgStatus = loadSDLImage();
+	if (sdlImgStatus != sdlImageSupport)
+	{
+		writeln("Failed loading SDL_Image: ", sdlImgStatus);
 		return 1;
 	}
 
@@ -313,6 +327,17 @@ Geometry[] twoPerlinSpheres()
 
 	world ~= new Sphere(V3(0, -1000, 0), 1000, new Lambertian(tex));
 	world ~= new Sphere(V3(0, 2, 0), 2, new Lambertian(tex));
+
+	return world;
+}
+
+Geometry[] earth()
+{
+	Geometry[] world;
+
+	auto tex = new Image("public/earthmap.jpg");
+	auto surf = new Lambertian(tex);
+	world ~= new Sphere(V3(0, 0, 0), 2, surf);
 
 	return world;
 }

@@ -3,7 +3,7 @@
     "bindbc-opengl": "~>1.0",
     "bindbc-sdl": "~>1.0"
   },
-  "versions": ["SDL_204", "GL_32", "GL_AllowDeprecated"],
+  "versions": ["SDL_Image", "GL_32", "GL_AllowDeprecated"],
   "name": "raytracing",
   "description": "raytracer based on https://raytracing.github.io/books/RayTracingInOneWeekend.html"
 }
