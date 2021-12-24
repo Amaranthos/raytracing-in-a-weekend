@@ -24,6 +24,10 @@ public double noise(in V3 point)
 	auto v = point.y - floor(point.y);
 	auto w = point.z - floor(point.z);
 
+	u = u ^^ 2 * (3 - 2 * u);
+	v = v ^^ 2 * (3 - 2 * v);
+	w = w ^^ 2 * (3 - 2 * w);
+
 	auto i = cast(int) floor(point.x);
 	auto j = cast(int) floor(point.y);
 	auto k = cast(int) floor(point.z);
