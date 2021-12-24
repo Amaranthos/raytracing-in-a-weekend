@@ -61,7 +61,8 @@ class Noise : Texture
 	Colour value(double u, double v, in V3 point) const
 	{
 		import perlin : turb;
+		import std.math : sin;
 
-		return cast(Colour)(Colour.white * turb(point * scale));
+		return cast(Colour)(Colour.white * 0.5 * (1 + sin(scale * point.z + 10 * turb(point))));
 	}
 }
