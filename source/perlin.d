@@ -18,11 +18,35 @@ static this()
 
 public double noise(in V3 point)
 {
-	auto i = cast(int)(4 * point.x) & (pointCount - 1);
-	auto j = cast(int)(4 * point.y) & (pointCount - 1);
-	auto k = cast(int)(4 * point.z) & (pointCount - 1);
+	import std.math : floor;
 
-	return ranFloat[permX[i] ^ permY[j] ^ permZ[k]];
+	auto u = point.x - floor(point.x);
+	auto v = point.y - floor(point.y);
+	auto w = point.z - floor(point.z);
+
+	auto i = cast(int) floor(point.x);
+	auto j = cast(int) floor(point.y);
+	auto k = cast(int) floor(point.z);
+
+	double[2][2][2] c;
+	foreach (int di; 0 .. 2)
+	{
+		foreach (int dj; 0 .. 2)
+		{
+			foreach (int dk; 0 .. 2)
+			{
+				// dfmt off
+				c[dk][dj][di] = ranFloat[
+					permX[(i + di) & (pointCount - 1)] ^
+					permX[(j + dj) & (pointCount - 1)] ^
+					permX[(k + dk) & (pointCount - 1)]
+				];
+				// dfmt on
+			}
+		}
+	}
+
+	return trilerp(c, u, v, w);
 }
 
 private:
@@ -33,7 +57,7 @@ int[] permX;
 int[] permY;
 int[] permZ;
 
-static int[] generatePerm()
+int[] generatePerm()
 {
 	auto p = new int[pointCount];
 	foreach (idx, ref i; p)
@@ -45,7 +69,7 @@ static int[] generatePerm()
 	return p;
 }
 
-static void permute(ref int[] p, int n)
+void permute(ref int[] p, int n)
 {
 	foreach_reverse (int i; 1 .. n)
 	{
@@ -54,4 +78,24 @@ static void permute(ref int[] p, int n)
 		p[i] = p[target];
 		p[target] = tmp;
 	}
+}
+
+double trilerp(double[2][2][2] c, double u, double v, double w)
+{
+	auto sum = 0.0;
+	foreach (int i; 0 .. 2)
+	{
+		foreach (int j; 0 .. 2)
+		{
+			foreach (int k; 0 .. 2)
+			{
+				sum +=
+					(i * u + (1 - i) * (1 - u)) *
+					(j * v + (1 - j) * (1 - v)) *
+					(k * w + (1 - k) * (1 - w)) *
+					c[k][j][i];
+			}
+		}
+	}
+	return sum;
 }
