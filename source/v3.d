@@ -148,6 +148,11 @@ union V3
 		return this;
 	}
 
+	ref auto opIndex(size_t i) const
+	{
+		return e[i];
+	}
+
 	string toString() const
 	{
 		import std.string : format;
