@@ -12,6 +12,7 @@ import geometry;
 import hit_record;
 import material;
 import ray;
+import texture;
 import v3;
 
 enum double aspectRatio = 16.0 / 9.0;
@@ -26,7 +27,7 @@ enum uint samplesPerPixel = 100;
 enum uint maxDepth = 50;
 
 GLuint textureId;
-uint[] texture;
+uint[] outBuffer;
 
 Colour rayColour(in Ray ray, Geometry[] world, in int depth)
 {
@@ -56,59 +57,36 @@ Colour rayColour(in Ray ray, Geometry[] world, in int depth)
 
 void loadScene()
 {
-	texture = new uint[](texWidth * texHeight);
-
-	V3 camPos = V3(13, 2, 3);
-	V3 lookAt = V3(0, 0, 0);
-	auto cam = new Camera(camPos, lookAt, V3.up, 20, aspectRatio, 0.1, 10.0, 0.0, 1.0);
+	outBuffer = new uint[](texWidth * texHeight);
 
 	Geometry[] world;
 
-	Material matGround = new Lambertian(Colour(0.5, 0.5, 0.5));
-	world ~= new Sphere(V3(0.0, -1000, 0), 1000, matGround);
+	V3 camPos;
+	V3 lookAt;
+	auto vFov = 40.0;
+	auto aperture = 0.0;
 
-	foreach (a; -6 .. 6)
+	switch (0)
 	{
-		foreach (b; -6 .. 6)
-		{
-			auto matChoice = uniform01;
-			V3 center = V3(a + 0.9 * uniform01, 0.2, b + 0.9 * uniform01);
+	case 1:
+		world = randomWorld();
+		camPos = V3(13, 2, 3);
+		lookAt = V3(0, 0, 0);
+		vFov = 20.0;
+		aperture = 0.1;
+		break;
 
-			if ((center - V3(4, 0.2, 0)).magnitude > 0.9)
-			{
-				Material mat;
-
-				if (matChoice < 0.8)
-				{
-					auto albedo = Colour.random().hadamard(Colour.random());
-					mat = new Lambertian(cast(Colour) albedo);
-					auto center2 = center + V3(0, uniform(0.0, 0.5), 0);
-					world ~= new MovingSphere(center, center2, 0.0, 1.0, 0.2, mat);
-				}
-				else if (matChoice < 0.95)
-				{
-					auto albedo = Colour.random(0.5, 1.0);
-					auto roughness = uniform(0.0, 0.5);
-					mat = new Metal(albedo, roughness);
-					world ~= new Sphere(center, 0.2, mat);
-				}
-				else
-				{
-					mat = new Dielectric(1.5);
-					world ~= new Sphere(center, 0.2, mat);
-				}
-			}
-		}
+	case 2:
+	default:
+		world = twoSpheres();
+		camPos = V3(13, 2, 3);
+		lookAt = V3(0, 0, 0);
+		vFov = 20.0;
+		break;
 	}
 
-	auto mat1 = new Dielectric(1.5);
-	world ~= new Sphere(V3(0, 1, 0), 1.0, mat1);
-
-	auto mat2 = new Lambertian(Colour(0.4, 0.2, 0.1));
-	world ~= new Sphere(V3(-4, 1, 0), 1.0, mat2);
-
-	auto mat3 = new Metal(Colour(0.7, 0.6, 0.5), 0.0);
-	world ~= new Sphere(V3(4, 1, 0), 1.0, mat3);
+	auto distanceToFocus = 10.0;
+	auto cam = new Camera(camPos, lookAt, V3.up, vFov, aspectRatio, aperture, distanceToFocus, 0.0, 1.0);
 
 	enum char[] spinner = ['\\', '|', '/', '-'];
 
@@ -132,7 +110,7 @@ void loadScene()
 
 			enum invSamples = 1.0 / samplesPerPixel;
 
-			texture[j * texWidth + i] =
+			outBuffer[j * texWidth + i] =
 				(cast(Colour)(pxlColour * invSamples))
 				.gammaCorrect
 				.toUint;
@@ -163,7 +141,7 @@ void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, outBuffer
 			.ptr);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	GLuint fboId;
@@ -253,4 +231,69 @@ int main()
 	}
 
 	return 0;
+}
+
+Geometry[] randomWorld()
+{
+	Geometry[] world;
+
+	Material matGround = new Lambertian(new Checker(Colour(0.2, 0.3, 0.1), Colour(0.9, 0.9, 0.9)));
+	world ~= new Sphere(V3(0.0, -1000, 0), 1000, matGround);
+
+	foreach (a; -6 .. 6)
+	{
+		foreach (b; -6 .. 6)
+		{
+			auto matChoice = uniform01;
+			V3 center = V3(a + 0.9 * uniform01, 0.2, b + 0.9 * uniform01);
+
+			if ((center - V3(4, 0.2, 0)).magnitude > 0.9)
+			{
+				Material mat;
+
+				if (matChoice < 0.8)
+				{
+					auto albedo = Colour.random().hadamard(Colour.random());
+					mat = new Lambertian(cast(Colour) albedo);
+					auto center2 = center + V3(0, uniform(0.0, 0.5), 0);
+					world ~= new MovingSphere(center, center2, 0.0, 1.0, 0.2, mat);
+				}
+				else if (matChoice < 0.95)
+				{
+					auto albedo = Colour.random(0.5, 1.0);
+					auto roughness = uniform(0.0, 0.5);
+					mat = new Metal(albedo, roughness);
+					world ~= new Sphere(center, 0.2, mat);
+				}
+				else
+				{
+					mat = new Dielectric(1.5);
+					world ~= new Sphere(center, 0.2, mat);
+				}
+			}
+		}
+	}
+
+	auto mat1 = new Dielectric(1.5);
+	world ~= new Sphere(V3(0, 1, 0), 1.0, mat1);
+
+	auto mat2 = new Lambertian(Colour(0.4, 0.2, 0.1));
+	world ~= new Sphere(V3(-4, 1, 0), 1.0, mat2);
+
+	auto mat3 = new Metal(Colour(0.7, 0.6, 0.5), 0.0);
+	world ~= new Sphere(V3(4, 1, 0), 1.0, mat3);
+
+	return world;
+}
+
+Geometry[] twoSpheres()
+{
+	Geometry[] world;
+
+	auto tex = new Checker(Colour(0.2, 0.3, 0.1), Colour(0.9, 0.9, 0.9));
+
+	world ~= new Sphere(V3(0.0, -10, 0), 10, new Lambertian(tex));
+	world ~= new Sphere(V3(0.0, 10, 0), 10, new Lambertian(tex));
+
+	return world;
 }
