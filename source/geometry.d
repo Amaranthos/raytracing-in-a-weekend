@@ -135,7 +135,7 @@ class MovingSphere : Geometry
 	}
 }
 
-class BoxXY : Geometry
+class PlaneXY : Geometry
 {
 	Material mat;
 	double x0, x1, y0, y1, k;
@@ -176,6 +176,130 @@ class BoxXY : Geometry
 	bool boundingBox(double t0, double t1, out AABB boundingBox) const
 	{
 		boundingBox = AABB(V3(x0, y0, k - double.epsilon), V3(x1, y1, k + double.epsilon));
+		return true;
+	}
+}
+
+class PlaneXZ : Geometry
+{
+	Material mat;
+	double x0, x1, z0, z1, k;
+
+	this(double x0, double x1, double z0, double z1, double k, Material mat)
+	{
+		this.x0 = x0;
+		this.x1 = x1;
+		this.z0 = z0;
+		this.z1 = z1;
+		this.k = k;
+		this.mat = mat;
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		auto t = (k - ray.origin.y) / ray.dir.y;
+		if (t < tMin || t > tMax)
+			return false;
+
+		auto x = ray.origin.x + t * ray.dir.x;
+		auto z = ray.origin.z + t * ray.dir.z;
+
+		if (x < x0 || x > x1 || z < z0 || z > z1)
+			return false;
+
+		auto outwardNorm = V3.up;
+		rec.u = (x - x0) / (x1 - x0);
+		rec.v = (z - z0) / (z1 - z0);
+		rec.t = t;
+		rec.setFaceNormal(ray, outwardNorm);
+		rec.mat = mat;
+		rec.pos = ray.at(t);
+
+		return true;
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		boundingBox = AABB(V3(x0, k - double.epsilon, z0), V3(x1, k + double.epsilon, z1));
+		return true;
+	}
+}
+
+class PlaneYZ : Geometry
+{
+	Material mat;
+	double y0, y1, z0, z1, k;
+
+	this(double y0, double y1, double z0, double z1, double k, Material mat)
+	{
+		this.y0 = y0;
+		this.y1 = y1;
+		this.z0 = z0;
+		this.z1 = z1;
+		this.k = k;
+		this.mat = mat;
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		auto t = (k - ray.origin.x) / ray.dir.x;
+		if (t < tMin || t > tMax)
+			return false;
+
+		auto y = ray.origin.y + t * ray.dir.y;
+		auto z = ray.origin.z + t * ray.dir.z;
+
+		if (y < y0 || y > y1 || z < z0 || z > z1)
+			return false;
+
+		auto outwardNorm = V3.right;
+		rec.u = (y - y0) / (y1 - y0);
+		rec.v = (z - z0) / (z1 - z0);
+		rec.t = t;
+		rec.setFaceNormal(ray, outwardNorm);
+		rec.mat = mat;
+		rec.pos = ray.at(t);
+
+		return true;
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		boundingBox = AABB(V3(k - double.epsilon, y0, z0), V3(k + double.epsilon, y1, z1));
+		return true;
+	}
+}
+
+class Box : Geometry
+{
+	V3 minimum;
+	V3 maximum;
+	Geometry[] sides;
+
+	this(in V3 min, in V3 max, Material mat)
+	{
+		minimum = min;
+		maximum = max;
+
+		sides ~= new PlaneXY(min.x, max.x, min.y, max.y, max.z, mat);
+		sides ~= new PlaneXY(min.x, max.x, min.y, max.y, min.z, mat);
+
+		sides ~= new PlaneXZ(min.x, max.x, min.z, max.z, max.y, mat);
+		sides ~= new PlaneXZ(min.x, max.x, min.z, max.z, max.y, mat);
+
+		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, max.x, mat);
+		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, max.x, mat);
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		return sides.hit(ray, tMin, tMax, rec);
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		boundingBox = AABB(minimum, maximum);
+
 		return true;
 	}
 }

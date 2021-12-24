@@ -16,13 +16,20 @@ import ray;
 import texture;
 import v3;
 
-enum double aspectRatio = 16.0 / 9.0;
+V3 camPos;
+V3 lookAt;
+auto vFov = 40.0;
+auto aperture = 0.0;
+Colour background = Colour.black;
 
-enum uint texWidth = 400;
-enum uint texHeight = cast(uint)(texWidth / aspectRatio);
+double aspectRatio = 16.0 / 9.0;
+uint samplesPerPixel = 100;
 
-enum uint winWidth = texWidth;
-enum uint winHeight = texHeight;
+uint texWidth = 400;
+uint texHeight;
+
+enum uint winWidth = 1024;
+enum uint winHeight = 1024;
 
 enum uint maxDepth = 50;
 
@@ -56,16 +63,7 @@ Colour rayColour(in Ray ray, in Colour background, Geometry[] world, in int dept
 
 void loadScene()
 {
-	outBuffer = new uint[](texWidth * texHeight);
-
 	Geometry[] world;
-
-	V3 camPos;
-	V3 lookAt;
-	auto vFov = 40.0;
-	auto aperture = 0.0;
-	Colour background = Colour.black;
-	uint samplesPerPixel = 100;
 
 	switch (0)
 	{
@@ -103,23 +101,34 @@ void loadScene()
 		break;
 
 	case 5:
-	default:
 		world = simpleLight();
 		samplesPerPixel = 400;
 		camPos = V3(26, 3, 6);
 		lookAt = V3(0, 2, 0);
 		vFov = 20.0;
 		break;
+
+	default:
+		world = cornellBox();
+		aspectRatio = 1.0;
+		texWidth = 600;
+		samplesPerPixel = 200;
+		camPos = V3(278, 278, -800);
+		lookAt = V3(278, 278, 0);
+		vFov = 40.0;
+		break;
 	}
+
+	texHeight = cast(uint)(texWidth / aspectRatio);
 
 	auto distanceToFocus = 10.0;
 	auto cam = new Camera(camPos, lookAt, V3.up, vFov, aspectRatio, aperture, distanceToFocus, 0.0, 1.0);
 
 	enum char[] spinner = ['\\', '|', '/', '-'];
 
-	const invSamples = 1.0 / samplesPerPixel;
-
 	writeln;
+	const invSamples = 1.0 / samplesPerPixel;
+	outBuffer = new uint[](texWidth * texHeight);
 	foreach (j; 0 .. texHeight)
 	{
 		writef!"\r %s lines remaining: %3d"(spinner[j % $], texHeight - j);
@@ -176,8 +185,12 @@ void renderScene()
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 		GL_TEXTURE_2D, textureId, 0);
+
+	auto xDiff = (winWidth - texWidth) / 2;
+	auto yDiff = (winHeight - texHeight) / 2;
+
 	glBlitFramebuffer(0, 0, texWidth, texHeight,
-		0, 0, winWidth, winHeight,
+		xDiff, yDiff, xDiff + texWidth, yDiff + texHeight,
 		GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glDeleteFramebuffers(1, &fboId);
@@ -194,6 +207,14 @@ int main()
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		throw new SDLException();
+
+	SDLImageSupport sdlImgStatus = loadSDLImage();
+	if (sdlImgStatus != sdlImageSupport)
+	{
+		writeln("Failed loading SDL_Image: ", sdlImgStatus);
+		return 1;
+	}
+
 	SDL_GL_SetAttribute(
 		SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(
@@ -202,7 +223,7 @@ int main()
 		SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	auto window = SDL_CreateWindow("OpenGL 3.2 App", SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+		SDL_WINDOWPOS_UNDEFINED, 1024, 1024, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if (!window)
 		throw new SDLException();
 	const context = SDL_GL_CreateContext(
@@ -217,13 +238,6 @@ int main()
 	if (glStatus < glSupport)
 	{
 		writeln("Failed loading minimum required OpenGL version: ", glStatus);
-		return 1;
-	}
-
-	SDLImageSupport sdlImgStatus = loadSDLImage();
-	if (sdlImgStatus != sdlImageSupport)
-	{
-		writeln("Failed loading SDL_Image: ", sdlImgStatus);
 		return 1;
 	}
 
@@ -365,7 +379,29 @@ Geometry[] simpleLight()
 	world ~= new Sphere(V3(0, 2, 0), 2, new Lambertian(tex));
 
 	auto light = new DiffuseLight(Colour(4, 4, 4));
-	world ~= new BoxXY(3, 5, 1, 3, -2, light);
+	world ~= new PlaneXY(3, 5, 1, 3, -2, light);
+
+	return world;
+}
+
+Geometry[] cornellBox()
+{
+	Geometry[] world;
+
+	auto red = new Lambertian(Colour(0.65, 0.05, 0.05));
+	auto white = new Lambertian(Colour(0.73, 0.73, 0.73));
+	auto green = new Lambertian(Colour(0.12, 0.45, 0.15));
+	auto light = new DiffuseLight(Colour(15, 15, 15));
+
+	world ~= new PlaneYZ(0, 555, 0, 555, 0, green);
+	world ~= new PlaneYZ(0, 555, 0, 555, 555, red);
+	world ~= new PlaneXZ(213, 343, 227, 332, 554, light);
+	world ~= new PlaneXZ(0, 555, 0, 555, 0, white);
+	world ~= new PlaneXZ(0, 555, 0, 555, 555, white);
+	world ~= new PlaneXY(0, 555, 0, 555, 555, white);
+
+	world ~= new Box(V3(120, 0, 65), V3(295, 165, 230), white);
+	world ~= new Box(V3(265, 0, 295), V3(430, 330, 460), white);
 
 	return world;
 }
