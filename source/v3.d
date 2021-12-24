@@ -198,6 +198,11 @@ union V3
 
 		return V3(uniform(min, max), uniform(min, max), uniform(min, max));
 	}
+
+	static V3 infinity()
+	{
+		return V3(double.infinity, double.infinity, double.infinity);
+	}
 }
 
 V3 randomPointInUnitSphere()

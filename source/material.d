@@ -117,3 +117,30 @@ class Dielectric : Material
 		return r0 + (1 - r0) * ((1 - cosine) ^^ 5);
 	}
 }
+
+class Isotropic : Material
+{
+	Texture albedo;
+
+	this(Colour colour)
+	{
+		this.albedo = new SolidColour(colour);
+	}
+
+	this(Texture tex)
+	{
+		this.albedo = tex;
+	}
+
+	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	{
+		scattered = Ray(rec.pos, randomPointInUnitSphere, ray.time);
+		attenuation = albedo.value(rec.u, rec.v, rec.pos);
+		return true;
+	}
+
+	Colour emitted(double u, double v, in V3 point) const
+	{
+		return Colour.black;
+	}
+}

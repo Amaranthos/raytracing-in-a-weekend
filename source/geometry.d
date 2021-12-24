@@ -175,7 +175,7 @@ class PlaneXY : Geometry
 
 	bool boundingBox(double t0, double t1, out AABB boundingBox) const
 	{
-		boundingBox = AABB(V3(x0, y0, k - double.epsilon), V3(x1, y1, k + double.epsilon));
+		boundingBox = AABB(V3(x0, y0, k - 0.0001), V3(x1, y1, k + 0.0001));
 		return true;
 	}
 }
@@ -220,7 +220,7 @@ class PlaneXZ : Geometry
 
 	bool boundingBox(double t0, double t1, out AABB boundingBox) const
 	{
-		boundingBox = AABB(V3(x0, k - double.epsilon, z0), V3(x1, k + double.epsilon, z1));
+		boundingBox = AABB(V3(x0, k - 0.0001, z0), V3(x1, k + 0.0001, z1));
 		return true;
 	}
 }
@@ -265,7 +265,7 @@ class PlaneYZ : Geometry
 
 	bool boundingBox(double t0, double t1, out AABB boundingBox) const
 	{
-		boundingBox = AABB(V3(k - double.epsilon, y0, z0), V3(k + double.epsilon, y1, z1));
+		boundingBox = AABB(V3(k - 0.0001, y0, z0), V3(k + 0.0001, y1, z1));
 		return true;
 	}
 }
@@ -285,10 +285,10 @@ class Box : Geometry
 		sides ~= new PlaneXY(min.x, max.x, min.y, max.y, min.z, mat);
 
 		sides ~= new PlaneXZ(min.x, max.x, min.z, max.z, max.y, mat);
-		sides ~= new PlaneXZ(min.x, max.x, min.z, max.z, max.y, mat);
+		sides ~= new PlaneXZ(min.x, max.x, min.z, max.z, min.y, mat);
 
 		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, max.x, mat);
-		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, max.x, mat);
+		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, min.x, mat);
 	}
 
 	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
@@ -301,6 +301,130 @@ class Box : Geometry
 		boundingBox = AABB(minimum, maximum);
 
 		return true;
+	}
+}
+
+class Translate : Geometry
+{
+	Geometry geo;
+	V3 offset;
+
+	this(Geometry geo, in V3 translation)
+	{
+		this.geo = geo;
+		this.offset = translation;
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		Ray moved = Ray(ray.origin - offset, ray.dir, ray.time);
+		if (!geo.hit(moved, tMin, tMax, rec))
+		{
+			return false;
+		}
+
+		rec.pos += offset;
+		rec.setFaceNormal(moved, rec.norm);
+
+		return true;
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		if (!geo.boundingBox(t0, t1, boundingBox))
+			return false;
+
+		boundingBox = AABB(boundingBox.minimum + offset, boundingBox.maximum + offset);
+		return true;
+	}
+}
+
+class RotateY : Geometry
+{
+	Geometry geo;
+	double sinTheta;
+	double cosTheta;
+	bool hasBox;
+	AABB bbox;
+
+	this(Geometry geo, double angle)
+	{
+		this.geo = geo;
+
+		import math : deg2Rad;
+		import std.math : sin, cos;
+		import std.algorithm : min, max;
+
+		auto radians = angle.deg2Rad;
+		sinTheta = radians.sin;
+		cosTheta = radians.cos;
+		hasBox = geo.boundingBox(0, 1, bbox);
+
+		V3 minimum = V3.infinity;
+		V3 maximum = -V3.infinity;
+
+		foreach (i; 0 .. 2)
+		{
+			foreach (j; 0 .. 2)
+			{
+				foreach (k; 0 .. 2)
+				{
+					auto x = i * bbox.maximum.x + (1 - i) * bbox.minimum.x;
+					auto y = j * bbox.maximum.y + (1 - j) * bbox.minimum.y;
+					auto z = k * bbox.maximum.z + (1 - k) * bbox.minimum.z;
+
+					auto newX = cosTheta * x + sinTheta * z;
+					auto newZ = -sinTheta * x + cosTheta * z;
+
+					V3 tester = V3(newX, y, newZ);
+
+					foreach (c; 0 .. 3)
+					{
+						minimum.e[c] = min(minimum[c], tester[c]);
+						maximum.e[c] = max(maximum[c], tester[c]);
+					}
+				}
+			}
+		}
+
+		bbox = AABB(minimum, maximum);
+	}
+
+	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		V3 origin = ray.origin;
+		V3 dir = ray.dir;
+
+		origin.x = cosTheta * ray.origin.x - sinTheta * ray.origin.z;
+		origin.z = sinTheta * ray.origin.x + cosTheta * ray.origin.z;
+
+		dir.x = cosTheta * ray.dir.x - sinTheta * ray.dir.z;
+		dir.z = sinTheta * ray.dir.x + cosTheta * ray.dir.z;
+
+		Ray rotated = Ray(origin, dir, ray.time);
+
+		if (!geo.hit(rotated, tMin, tMax, rec))
+			return false;
+
+		V3 p = rec.pos;
+		V3 norm = rec.norm;
+
+		p.x = cosTheta * rec.pos.x + sinTheta * rec.pos.z;
+		p.z = -sinTheta * rec.pos.x + cosTheta * rec.pos.z;
+
+		norm.x = cosTheta * rec.norm.x + sinTheta * rec.norm.z;
+		norm.z = -sinTheta * rec.norm.x + cosTheta * rec.norm.z;
+
+		rec.pos = p;
+		rec.setFaceNormal(rotated, norm);
+
+		return true;
+	}
+
+	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	{
+		boundingBox = bbox;
+		return hasBox;
 	}
 }
 

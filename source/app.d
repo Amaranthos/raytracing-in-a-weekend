@@ -400,8 +400,15 @@ Geometry[] cornellBox()
 	world ~= new PlaneXZ(0, 555, 0, 555, 555, white);
 	world ~= new PlaneXY(0, 555, 0, 555, 555, white);
 
-	world ~= new Box(V3(120, 0, 65), V3(295, 165, 230), white);
-	world ~= new Box(V3(265, 0, 295), V3(430, 330, 460), white);
+	Geometry box1 = new Box(V3(0, 0, 0), V3(165, 330, 165), white);
+	box1 = new RotateY(box1, 15);
+	box1 = new Translate(box1, V3(265, 0, 259));
+	world ~= box1;
+
+	Geometry box2 = new Box(V3(0, 0, 0), V3(165, 165, 165), white);
+	box2 = new RotateY(box2, -18);
+	box2 = new Translate(box2, V3(130, 0, 65));
+	world ~= box2;
 
 	return world;
 }
