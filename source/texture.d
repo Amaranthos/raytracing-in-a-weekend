@@ -48,3 +48,13 @@ class Checker : Texture
 		return sines < 0 ? odd.value(u, v, point) : even.value(u, v, point);
 	}
 }
+
+class Noise : Texture
+{
+	Colour value(double u, double v, in V3 point) const
+	{
+		import perlin : noise;
+
+		return cast(Colour)(Colour.white * noise(point));
+	}
+}

@@ -77,8 +77,15 @@ void loadScene()
 		break;
 
 	case 2:
-	default:
 		world = twoSpheres();
+		camPos = V3(13, 2, 3);
+		lookAt = V3(0, 0, 0);
+		vFov = 20.0;
+		break;
+
+	case 3:
+	default:
+		world = twoPerlinSpheres();
 		camPos = V3(13, 2, 3);
 		lookAt = V3(0, 0, 0);
 		vFov = 20.0;
@@ -294,6 +301,18 @@ Geometry[] twoSpheres()
 
 	world ~= new Sphere(V3(0.0, -10, 0), 10, new Lambertian(tex));
 	world ~= new Sphere(V3(0.0, 10, 0), 10, new Lambertian(tex));
+
+	return world;
+}
+
+Geometry[] twoPerlinSpheres()
+{
+	Geometry[] world;
+
+	auto tex = new Noise();
+
+	world ~= new Sphere(V3(0, -1000, 0), 1000, new Lambertian(tex));
+	world ~= new Sphere(V3(0, 2, 0), 2, new Lambertian(tex));
 
 	return world;
 }
