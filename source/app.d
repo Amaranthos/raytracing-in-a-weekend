@@ -215,9 +215,13 @@ int main()
 		return 1;
 	}
 
-	loadScene();
+	import std.datetime.stopwatch : benchmark;
+
+	const time = benchmark!(loadScene)(1);
 	scope (exit)
 		unloadScene();
+	writeln(time);
+
 	bool quit = false;
 	SDL_Event event;
 	while (!quit)
