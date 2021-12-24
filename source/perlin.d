@@ -6,11 +6,11 @@ import std.random : uniform01, uniform;
 
 static this()
 {
-	ranFloat = new double[pointCount];
-	foreach (ref i; ranFloat)
+	foreach (ref v; ranVec)
 	{
-		i = uniform01;
+		v = V3.random(-1, 1);
 	}
+
 	permX = generatePerm;
 	permY = generatePerm;
 	permZ = generatePerm;
@@ -24,15 +24,11 @@ public double noise(in V3 point)
 	auto v = point.y - floor(point.y);
 	auto w = point.z - floor(point.z);
 
-	u = u ^^ 2 * (3 - 2 * u);
-	v = v ^^ 2 * (3 - 2 * v);
-	w = w ^^ 2 * (3 - 2 * w);
-
 	auto i = cast(int) floor(point.x);
 	auto j = cast(int) floor(point.y);
 	auto k = cast(int) floor(point.z);
 
-	double[2][2][2] c;
+	V3[2][2][2] c;
 	foreach (int di; 0 .. 2)
 	{
 		foreach (int dj; 0 .. 2)
@@ -40,7 +36,7 @@ public double noise(in V3 point)
 			foreach (int dk; 0 .. 2)
 			{
 				// dfmt off
-				c[dk][dj][di] = ranFloat[
+				c[dk][dj][di] = ranVec[
 					permX[(i + di) & (pointCount - 1)] ^
 					permX[(j + dj) & (pointCount - 1)] ^
 					permX[(k + dk) & (pointCount - 1)]
@@ -50,20 +46,20 @@ public double noise(in V3 point)
 		}
 	}
 
-	return trilerp(c, u, v, w);
+	return perlinInterpolation(c, u, v, w);
 }
 
 private:
 
 enum int pointCount = 256;
-double[] ranFloat;
-int[] permX;
-int[] permY;
-int[] permZ;
+V3[pointCount] ranVec;
+int[pointCount] permX;
+int[pointCount] permY;
+int[pointCount] permZ;
 
-int[] generatePerm()
+int[pointCount] generatePerm()
 {
-	auto p = new int[pointCount];
+	int[pointCount] p;
 	foreach (idx, ref i; p)
 	{
 		i = cast(int) idx;
@@ -73,7 +69,7 @@ int[] generatePerm()
 	return p;
 }
 
-void permute(ref int[] p, int n)
+void permute(ref int[pointCount] p, int n)
 {
 	foreach_reverse (int i; 1 .. n)
 	{
@@ -84,22 +80,27 @@ void permute(ref int[] p, int n)
 	}
 }
 
-double trilerp(double[2][2][2] c, double u, double v, double w)
+double perlinInterpolation(V3[2][2][2] c, double u, double v, double w)
 {
-	auto sum = 0.0;
+	auto uu = u ^^ 2 * (3 - 2 * u);
+	auto vv = v ^^ 2 * (3 - 2 * v);
+	auto ww = w ^^ 2 * (3 - 2 * w);
+	auto accum = 0.0;
+
 	foreach (int i; 0 .. 2)
 	{
 		foreach (int j; 0 .. 2)
 		{
 			foreach (int k; 0 .. 2)
 			{
-				sum +=
-					(i * u + (1 - i) * (1 - u)) *
-					(j * v + (1 - j) * (1 - v)) *
-					(k * w + (1 - k) * (1 - w)) *
-					c[k][j][i];
+				V3 weight = V3(u - i, v - j, w - k);
+				accum +=
+					(i * uu + (1 - i) * (1 - uu)) *
+					(j * vv + (1 - j) * (1 - vv)) *
+					(k * ww + (1 - k) * (1 - ww)) *
+					weight.dot(c[k][j][i]);
 			}
 		}
 	}
-	return sum;
+	return accum;
 }

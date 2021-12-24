@@ -62,6 +62,6 @@ class Noise : Texture
 	{
 		import perlin : noise;
 
-		return cast(Colour)(Colour.white * noise(point * scale));
+		return cast(Colour)(Colour.white * 0.5 * (1.0 + noise(point * scale)));
 	}
 }
