@@ -1,10 +1,13 @@
 import bindbc.sdl;
 import bindbc.opengl;
 
+import std.parallelism;
+import std.range;
 import std.random;
 import std.stdio;
 import std.string;
 
+import bvh;
 import camera;
 import colour;
 import exception;
@@ -15,6 +18,7 @@ import material;
 import ray;
 import texture;
 import v3;
+import volumes;
 
 V3 camPos;
 V3 lookAt;
@@ -108,12 +112,33 @@ void loadScene()
 		vFov = 20.0;
 		break;
 
-	default:
+	case 6:
 		world = cornellBox();
 		aspectRatio = 1.0;
 		texWidth = 600;
 		samplesPerPixel = 200;
 		camPos = V3(278, 278, -800);
+		lookAt = V3(278, 278, 0);
+		vFov = 40.0;
+		break;
+
+	case 8:
+	default:
+		world = cornellSmoke();
+		aspectRatio = 1.0;
+		texWidth = 600;
+		samplesPerPixel = 200;
+		camPos = V3(278, 278, -800);
+		lookAt = V3(278, 278, 0);
+		vFov = 40.0;
+		break;
+
+	case 9:
+		world = finalScene();
+		aspectRatio = 1.0;
+		texWidth = 800;
+		samplesPerPixel = 10_000;
+		camPos = V3(478, 278, -600);
 		lookAt = V3(278, 278, 0);
 		vFov = 40.0;
 		break;
@@ -409,6 +434,96 @@ Geometry[] cornellBox()
 	box2 = new RotateY(box2, -18);
 	box2 = new Translate(box2, V3(130, 0, 65));
 	world ~= box2;
+
+	return world;
+}
+
+Geometry[] cornellSmoke()
+{
+	Geometry[] world;
+
+	auto red = new Lambertian(Colour(0.65, 0.05, 0.05));
+	auto white = new Lambertian(Colour(0.73, 0.73, 0.73));
+	auto green = new Lambertian(Colour(0.12, 0.45, 0.15));
+	auto light = new DiffuseLight(Colour(15, 15, 15));
+
+	world ~= new PlaneYZ(0, 555, 0, 555, 0, green);
+	world ~= new PlaneYZ(0, 555, 0, 555, 555, red);
+	world ~= new PlaneXZ(113, 443, 127, 432, 554, light);
+	world ~= new PlaneXZ(0, 555, 0, 555, 0, white);
+	world ~= new PlaneXZ(0, 555, 0, 555, 555, white);
+	world ~= new PlaneXY(0, 555, 0, 555, 555, white);
+
+	Geometry box1 = new Box(V3(0, 0, 0), V3(165, 330, 165), white);
+	box1 = new RotateY(box1, 15);
+	box1 = new Translate(box1, V3(265, 0, 259));
+	world ~= new ConstantMedium(box1, 0.01, Colour.black);
+
+	Geometry box2 = new Box(V3(0, 0, 0), V3(165, 165, 165), white);
+	box2 = new RotateY(box2, -18);
+	box2 = new Translate(box2, V3(130, 0, 65));
+	world ~= new ConstantMedium(box2, 0.01, Colour.white);
+
+	return world;
+}
+
+Geometry[] finalScene()
+{
+	Geometry[] boxes1;
+	auto ground = new Lambertian(Colour(0.48, 0.83, 0.53));
+
+	enum boxesPerSide = 20;
+	foreach (i; 0 .. boxesPerSide)
+	{
+		foreach (j; 0 .. boxesPerSide)
+		{
+			enum w = 100.0;
+			auto x0 = -1000.0 + i * w;
+			auto z0 = -1000.0 + j * w;
+			auto x1 = x0 + w;
+			auto z1 = z0 + w;
+
+			boxes1 ~= new Box(V3(x0, 0.0, z0), V3(x1, uniform(1, 101), z1), ground);
+		}
+	}
+
+	Geometry[] world;
+
+	world ~= new BVH(boxes1, 0, 1);
+
+	auto light = new DiffuseLight(Colour(7, 7, 7));
+	world ~= new PlaneXZ(123, 423, 147, 412, 554, light);
+
+	auto center1 = V3(400, 400, 200);
+	auto center2 = center1 + V3(30, 0, 0);
+	auto movingSphereMat = new Lambertian(Colour(0.7, 0.3, 0.1));
+	world ~= new MovingSphere(center1, center2, 0, 1, 50, movingSphereMat);
+
+	world ~= new Sphere(V3(260, 150, 45), 50, new Dielectric(1.5));
+	world ~= new Sphere(V3(0, 150, 50), 50, new Metal(Colour(0.8, 0.8, 0.9), 1.0));
+
+	auto boundary = new Sphere(V3(360, 150, 145), 70, new Dielectric(1.5));
+	world ~= boundary;
+	world ~= new ConstantMedium(boundary, 0.2, Colour(0.2, 0.4, 0.9));
+	boundary = new Sphere(V3.zero, 5000, new Dielectric(1.5));
+	world ~= new ConstantMedium(boundary, 0.0001, Colour.white);
+
+	auto emat = new Lambertian(new Image("public/earthmap.jpg"));
+	world ~= new Sphere(V3(400, 200, 400), 100, emat);
+
+	auto perText = new Noise(0.1);
+	world ~= new Sphere(V3(220, 280, 300), 80, new Lambertian(perText));
+
+	Geometry[] boxes2;
+	auto white = new Lambertian(Colour(0.73, 0.73, 0.73));
+
+	enum ns = 1000;
+	foreach (j; 0 .. ns)
+	{
+		boxes2 ~= new Sphere(V3.random(0, 165), 10, white);
+	}
+
+	world ~= new Translate(new RotateY(new BVH(boxes2, 0.0, 1.0), 15), V3(-100, 270, 395));
 
 	return world;
 }

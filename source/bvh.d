@@ -61,8 +61,16 @@ class BVH : Geometry
 		if (!box.hit(ray, tMin, tMax))
 			return false;
 
-		bool hitLeft = left.hit(ray, tMin, tMax, rec);
-		bool hitRight = right.hit(ray, tMin, hitLeft ? rec.t : tMax, rec);
+		HitRecord recLeft;
+		HitRecord recRight;
+
+		bool hitLeft = left.hit(ray, tMin, tMax, recLeft);
+		bool hitRight = right.hit(ray, tMin, hitLeft ? rec.t : tMax, recRight);
+
+		if (hitLeft)
+			rec = recLeft;
+		if (hitRight)
+			rec = recRight;
 
 		return hitLeft || hitRight;
 	}
