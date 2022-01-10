@@ -29,7 +29,7 @@ class ConstantMedium : Geometry
 		this.phaseFunc = new Isotropic(colour);
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		import std.math : log;
 		import std.random : uniform01;
@@ -79,7 +79,7 @@ class ConstantMedium : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		return boundary.boundingBox(t0, t1, boundingBox);
 	}

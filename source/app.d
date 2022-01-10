@@ -1,8 +1,7 @@
 import bindbc.sdl;
 import bindbc.opengl;
 
-import std.parallelism;
-import std.range;
+import std.math;
 import std.random;
 import std.stdio;
 import std.string;
@@ -15,6 +14,7 @@ import geometry;
 import hit_record;
 import lights;
 import material;
+import pdf;
 import ray;
 import texture;
 import v3;
@@ -25,6 +25,7 @@ V3 lookAt;
 auto vFov = 40.0;
 auto aperture = 0.0;
 Colour background = Colour.black;
+uint maxDepth = 50;
 
 double aspectRatio = 16.0 / 9.0;
 uint samplesPerPixel = 100;
@@ -35,12 +36,10 @@ uint texHeight;
 enum uint winWidth = 1024;
 enum uint winHeight = 1024;
 
-enum uint maxDepth = 50;
-
 GLuint textureId;
 uint[] outBuffer;
 
-Colour rayColour(in Ray ray, in Colour background, Geometry[] world, in int depth)
+Colour rayColour(in Ray ray, in Colour background, Geometry[] world, Geometry lights, in int depth)
 {
 	HitRecord rec;
 
@@ -56,13 +55,27 @@ Colour rayColour(in Ray ray, in Colour background, Geometry[] world, in int dept
 
 	Ray scattered;
 	Colour attenuation;
-	Colour emitted = rec.mat.emitted(rec.u, rec.v, rec.pos);
+	Colour emitted = rec.mat.emitted(ray, rec, rec.u, rec.v, rec.pos);
+	double pdfValue;
+	Colour albedo;
 
-	if (!rec.mat.scatter(ray, rec, attenuation, scattered))
+	if (!rec.mat.scatter(ray, rec, albedo, scattered, pdfValue))
 	{
 		return emitted;
 	}
-	return cast(Colour)(emitted + attenuation.hadamard(rayColour(scattered, background, world, depth - 1)));
+
+	auto p0 = new HittablePDF(lights, rec.pos);
+	auto p1 = new CosinePDF(rec.norm);
+	MixturePDF mixedPdf = new MixturePDF(p0, p1);
+
+	scattered = Ray(rec.pos, mixedPdf.generate, ray.time);
+	pdfValue = mixedPdf.value(scattered.dir);
+
+	return cast(Colour)(
+		emitted +
+			(albedo * rec.mat.scatteringPDF(ray, rec, scattered))
+			.hadamard(rayColour(scattered, background, world, lights, depth - 1))
+			/ pdfValue);
 }
 
 void loadScene()
@@ -113,17 +126,18 @@ void loadScene()
 		break;
 
 	case 6:
+	default:
 		world = cornellBox();
 		aspectRatio = 1.0;
 		texWidth = 600;
-		samplesPerPixel = 200;
+		samplesPerPixel = 1000;
+		maxDepth = 50;
 		camPos = V3(278, 278, -800);
 		lookAt = V3(278, 278, 0);
 		vFov = 40.0;
 		break;
 
 	case 8:
-	default:
 		world = cornellSmoke();
 		aspectRatio = 1.0;
 		texWidth = 600;
@@ -149,6 +163,9 @@ void loadScene()
 	auto distanceToFocus = 10.0;
 	auto cam = new Camera(camPos, lookAt, V3.up, vFov, aspectRatio, aperture, distanceToFocus, 0.0, 1.0);
 
+	Geometry lights =
+		new PlaneXZ(213, 343, 227, 332, 554, new Material());
+
 	enum char[] spinner = ['\\', '|', '/', '-'];
 
 	writeln;
@@ -168,7 +185,7 @@ void loadScene()
 				const double v = cast(
 					double)(j + uniform01) / (texHeight - 1);
 				Ray r = cam.ray(u, v);
-				pxlColour += rayColour(r, background, world, maxDepth);
+				pxlColour += rayColour(r, background, world, lights, maxDepth);
 			}
 
 			outBuffer[j * texWidth + i] =
@@ -420,7 +437,7 @@ Geometry[] cornellBox()
 
 	world ~= new PlaneYZ(0, 555, 0, 555, 0, green);
 	world ~= new PlaneYZ(0, 555, 0, 555, 555, red);
-	world ~= new PlaneXZ(213, 343, 227, 332, 554, light);
+	world ~= new FlipFace(new PlaneXZ(213, 343, 227, 332, 554, light));
 	world ~= new PlaneXZ(0, 555, 0, 555, 0, white);
 	world ~= new PlaneXZ(0, 555, 0, 555, 555, white);
 	world ~= new PlaneXY(0, 555, 0, 555, 555, white);

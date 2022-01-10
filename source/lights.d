@@ -21,13 +21,15 @@ class DiffuseLight : Material
 		this.emit = new SolidColour(colour);
 	}
 
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	override Colour emitted(in Ray ray, in HitRecord rec, double u, double v, in V3 point) const
 	{
-		return false;
-	}
-
-	Colour emitted(double u, double v, in V3 point) const
-	{
-		return emit.value(u, v, point);
+		if (rec.frontFace)
+		{
+			return emit.value(u, v, point);
+		}
+		else
+		{
+			return Colour.black;
+		}
 	}
 }

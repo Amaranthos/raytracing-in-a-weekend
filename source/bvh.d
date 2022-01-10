@@ -56,7 +56,7 @@ class BVH : Geometry
 		box = boxLeft.expand(boxRight);
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		if (!box.hit(ray, tMin, tMax))
 			return false;
@@ -75,14 +75,14 @@ class BVH : Geometry
 		return hitLeft || hitRight;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = box;
 		return true;
 	}
 }
 
-private bool boxCompare(in Geometry a, in Geometry b, int axis)
+private bool boxCompare(Geometry a, Geometry b, int axis)
 in (axis >= 0 && axis < 3)
 {
 	AABB boxA;

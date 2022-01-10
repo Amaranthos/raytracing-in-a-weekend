@@ -1,15 +1,30 @@
 module material;
 
+import std.math : PI;
+
 import colour;
 import hit_record;
+import onb;
 import ray;
 import texture;
 import v3;
 
-interface Material
+class Material
 {
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const;
-	Colour emitted(double u, double v, in V3 point) const;
+	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered, out double pdf) const
+	{
+		return false;
+	};
+
+	double scatteringPDF(in Ray ray, in HitRecord rec, in Ray scattered)
+	{
+		return 0.0;
+	}
+
+	Colour emitted(in Ray ray, in HitRecord rec, double u, double v, in V3 point) const
+	{
+		return Colour.black;
+	};
 }
 
 class Lambertian : Material
@@ -26,25 +41,21 @@ class Lambertian : Material
 		this.albedo = albedo;
 	}
 
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	override bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered, out double pdf) const
 	{
-		V3 scatterDir = rec.norm + randomUnitVector;
-		// const scatterDir = rec.norm + randomPointInUnitSphere;
-		// const scatterDir = randomInHemisphere(rec.norm);
+		ONB uvw = ONB.fromW(rec.norm);
+		auto direction = uvw.local(randomCosineDirection());
 
-		if (scatterDir.nearZero)
-		{
-			scatterDir = rec.norm;
-		}
-
-		scattered = Ray(rec.pos, scatterDir, ray.time);
+		scattered = Ray(rec.pos, direction.normalised, ray.time);
 		attenuation = albedo.value(rec.u, rec.v, rec.pos);
+		pdf = (uvw.w.dot(scattered.dir)) / PI;
 		return true;
 	}
 
-	Colour emitted(double u, double v, in V3 point) const
+	override double scatteringPDF(in Ray ray, in HitRecord rec, in Ray scattered)
 	{
-		return Colour.black;
+		auto cosine = rec.norm.dot(scattered.dir.normalised);
+		return cosine < 0 ? 0 : cosine / PI;
 	}
 }
 
@@ -59,17 +70,12 @@ class Metal : Material
 		this.roughness = roughness < 1 ? roughness : 1;
 	}
 
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	override bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered, out double pdf) const
 	{
 		V3 reflected = ray.dir.normalised.reflect(rec.norm);
 		scattered = Ray(rec.pos, reflected + roughness * randomPointInUnitSphere, ray.time);
 		attenuation = albedo;
 		return (scattered.dir.dot(rec.norm) > 0);
-	}
-
-	Colour emitted(double u, double v, in V3 point) const
-	{
-		return Colour.black;
 	}
 }
 
@@ -82,7 +88,7 @@ class Dielectric : Material
 		this.rIdx = refractiveIndex;
 	}
 
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	override bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered, out double pdf) const
 	{
 		attenuation = Colour.white;
 		double refractiveRatio = rec.frontFace ? (1.0 / rIdx) : rIdx;
@@ -103,11 +109,6 @@ class Dielectric : Material
 
 		scattered = Ray(rec.pos, direction, ray.time);
 		return true;
-	}
-
-	Colour emitted(double u, double v, in V3 point) const
-	{
-		return Colour.black;
 	}
 
 	private double reflectance(double cosine, double refractiveRatio) const
@@ -132,15 +133,10 @@ class Isotropic : Material
 		this.albedo = tex;
 	}
 
-	bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered) const
+	override bool scatter(in Ray ray, in HitRecord rec, out Colour attenuation, out Ray scattered, out double pdf) const
 	{
 		scattered = Ray(rec.pos, randomPointInUnitSphere, ray.time);
 		attenuation = albedo.value(rec.u, rec.v, rec.pos);
 		return true;
-	}
-
-	Colour emitted(double u, double v, in V3 point) const
-	{
-		return Colour.black;
 	}
 }

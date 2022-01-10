@@ -1,6 +1,8 @@
 module geometry;
 
 import std.typecons;
+import std.math;
+import std.random;
 
 import aabb;
 import hit_record;
@@ -8,10 +10,20 @@ import material;
 import ray;
 import v3;
 
-interface Geometry
+abstract class Geometry
 {
 	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec);
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const;
+	bool boundingBox(double t0, double t1, out AABB boundingBox);
+
+	double pdfValue(in V3 origin, in V3 v)
+	{
+		return 0.0;
+	}
+
+	V3 random(in V3 origin)
+	{
+		return V3.right;
+	}
 }
 
 class Sphere : Geometry
@@ -27,7 +39,7 @@ class Sphere : Geometry
 		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		V3 oc = ray.origin - pos;
 		auto a = ray.dir.magnitudeSquared;
@@ -60,7 +72,7 @@ class Sphere : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		const rad = V3(radius, radius, radius);
 		boundingBox = AABB(pos - rad, pos + rad);
@@ -85,7 +97,7 @@ class MovingSphere : Geometry
 		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		V3 oc = ray.origin - pos(ray.time);
 		auto a = ray.dir.magnitudeSquared;
@@ -118,7 +130,7 @@ class MovingSphere : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		const rad = V3(radius, radius, radius);
 		auto box0 = AABB(pos(t0) - rad, pos(t0) + rad);
@@ -127,7 +139,7 @@ class MovingSphere : Geometry
 		return true;
 	}
 
-	V3 pos(in double t) const
+	V3 pos(in double t)
 	{
 		import math : lerp;
 
@@ -150,7 +162,7 @@ class PlaneXY : Geometry
 		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		auto t = (k - ray.origin.z) / ray.dir.z;
 		if (t < tMin || t > tMax)
@@ -173,7 +185,7 @@ class PlaneXY : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = AABB(V3(x0, y0, k - 0.0001), V3(x1, y1, k + 0.0001));
 		return true;
@@ -195,7 +207,7 @@ class PlaneXZ : Geometry
 		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		auto t = (k - ray.origin.y) / ray.dir.y;
 		if (t < tMin || t > tMax)
@@ -218,10 +230,30 @@ class PlaneXZ : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = AABB(V3(x0, k - 0.0001, z0), V3(x1, k + 0.0001, z1));
 		return true;
+	}
+
+	override double pdfValue(in V3 origin, in V3 v)
+	{
+		HitRecord rec;
+		if (!this.hit(Ray(origin, v), 0.001, double.infinity, rec))
+		{
+			return 0.0;
+		}
+
+		auto area = (x1 - x0) * (z1 - z0);
+		auto distSq = rec.t * rec.t * v.magnitudeSquared;
+		auto cosine = abs(v.dot(rec.norm)) / v.magnitude;
+
+		return distSq / (cosine * area);
+	}
+
+	override V3 random(in V3 origin) const
+	{
+		return V3(uniform(x0, x1), k, uniform(z0, z1)) - origin;
 	}
 }
 
@@ -240,7 +272,7 @@ class PlaneYZ : Geometry
 		this.mat = mat;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		auto t = (k - ray.origin.x) / ray.dir.x;
 		if (t < tMin || t > tMax)
@@ -263,7 +295,7 @@ class PlaneYZ : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = AABB(V3(k - 0.0001, y0, z0), V3(k + 0.0001, y1, z1));
 		return true;
@@ -291,12 +323,12 @@ class Box : Geometry
 		sides ~= new PlaneYZ(min.y, max.y, min.z, max.z, min.x, mat);
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		return sides.hit(ray, tMin, tMax, rec);
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = AABB(minimum, maximum);
 
@@ -315,7 +347,7 @@ class Translate : Geometry
 		this.offset = translation;
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		Ray moved = Ray(ray.origin - offset, ray.dir, ray.time);
 		if (!geo.hit(moved, tMin, tMax, rec))
@@ -329,7 +361,7 @@ class Translate : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		if (!geo.boundingBox(t0, t1, boundingBox))
 			return false;
@@ -390,7 +422,7 @@ class RotateY : Geometry
 		bbox = AABB(minimum, maximum);
 	}
 
-	bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
 	{
 		V3 origin = ray.origin;
 		V3 dir = ray.dir;
@@ -421,10 +453,36 @@ class RotateY : Geometry
 		return true;
 	}
 
-	bool boundingBox(double t0, double t1, out AABB boundingBox) const
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
 	{
 		boundingBox = bbox;
 		return hasBox;
+	}
+}
+
+class FlipFace : Geometry
+{
+	Geometry geo;
+
+	this(Geometry geo)
+	{
+		this.geo = geo;
+	}
+
+	override bool hit(in Ray ray, double tMin, double tMax, out HitRecord rec)
+	{
+		if (!geo.hit(ray, tMin, tMax, rec))
+		{
+			return false;
+		}
+
+		rec.frontFace = !rec.frontFace;
+		return true;
+	}
+
+	override bool boundingBox(double t0, double t1, out AABB boundingBox)
+	{
+		return geo.boundingBox(t0, t1, boundingBox);
 	}
 }
 

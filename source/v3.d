@@ -83,9 +83,11 @@ union V3
 	{
 		import std.math : abs;
 
-		return x < double.epsilon
-			&& y < double.epsilon
-			&& z < double.epsilon;
+		enum double eps = 1e-8;
+
+		return x.abs < eps
+			&& y.abs < eps
+			&& z.abs < eps;
 	}
 
 	V3 reflect(in V3 norm) const
@@ -238,4 +240,20 @@ V3 randomInHemisphere(in V3 normal)
 {
 	V3 inUnitSphere = randomPointInUnitSphere;
 	return normal.dot(inUnitSphere) > 0.0 ? inUnitSphere : -inUnitSphere;
+}
+
+V3 randomCosineDirection()
+{
+	import std.math : cos, sin, sqrt, PI;
+	import std.random : uniform01;
+
+	auto r1 = uniform01;
+	auto r2 = uniform01;
+	auto z = sqrt(1 - r2);
+
+	auto phi = 2 * PI * r1;
+	auto x = cos(phi) * sqrt(r2);
+	auto y = sin(phi) * sqrt(r2);
+
+	return V3(x, y, z);
 }
